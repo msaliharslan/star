@@ -1,0 +1,8 @@
+1) D435i deg/s, m/s^2 xyz32f acc 62.5 Hz, gyro 200 Hz
+2) 720 x 1280, ~30 fps
+
+3) T265 deg/s, m/s^2, xyz32f, acc 62.5 Hz, gyro 200 Hz, pose 262 Hz
+4) 800 x 848, 30 fps, 8UC1 : 8 bit grayscale
+5) distortion model: kannala brandt4
+
+6) her frame time stamp atıyor
