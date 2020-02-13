@@ -36,64 +36,89 @@ int main(int argc, char **argv) try {
     cfg1.enable_device(devices[0].get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
     cfg1.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
     cfg1.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F);
-    cfg1.enable_stream(RS2_STREAM_DEPTH);
+    // cfg1.enable_stream(RS2_STREAM_DEPTH);
     cfg1.enable_record_to_file(string(devices[0].get_info(RS2_CAMERA_INFO_NAME)) + ".bag");
 
     cfg2.enable_device(devices[1].get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
     cfg2.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
     cfg2.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F);
     // cfg2.enable_stream(RS2_STREAM_POSE);
-    cfg2.enable_stream(RS2_STREAM_FISHEYE, 1);
-    cfg2.enable_stream(RS2_STREAM_FISHEYE, 2);
+    // cfg2.enable_stream(RS2_STREAM_FISHEYE, 1);
+    // cfg2.enable_stream(RS2_STREAM_FISHEYE, 2);
     cfg2.enable_record_to_file(string(devices[1].get_info(RS2_CAMERA_INFO_NAME)) + ".bag");
 
+
+    double ts1, ts2;
     pipeline pipe1(ctx), pipe2(ctx);
     pipe1.start(cfg1, [&](rs2::frame frame)
     {
-        // Cast the frame that arrived to motion frame
-        auto depth = frame.as<rs2::frameset>();
-        auto motion = frame.as<rs2::motion_frame>();
-        // If casting succeeded and the arrived frame is from gyro stream
-        if (motion && motion.get_profile().stream_type() == RS2_STREAM_GYRO && motion.get_profile().format() == RS2_FORMAT_MOTION_XYZ32F)
-        {
-            // Get the timestamp of the current frame
-            double ts = motion.get_timestamp();
-            // Get gyro measures
-            rs2_vector gyro_data = motion.get_motion_data();
+        // // Cast the frame that arrived to motion frame
+        // auto fset = frame.as<rs2::frameset>();
+        // auto depth = fset.get_depth_frame();
+        // auto motion = frame.as<rs2::motion_frame>();
+        // // If casting succeeded and the arrived frame is from gyro stream
+        // if (motion && motion.get_profile().stream_type() == RS2_STREAM_GYRO && motion.get_profile().format() == RS2_FORMAT_MOTION_XYZ32F)
+        // {
+        //     // Get the timestamp of the current frame
+        //     // ts1 = motion.get_timestamp();
+        //     // Get gyro measures
+        //     rs2_vector gyro_data = motion.get_motion_data();
 
-        }
-        // If casting succeeded and the arrived frame is from accelerometer stream
-        if (motion && motion.get_profile().stream_type() == RS2_STREAM_ACCEL && motion.get_profile().format() == RS2_FORMAT_MOTION_XYZ32F)
-        {
-            // Get accelerometer measures
-            rs2_vector accel_data = motion.get_motion_data();
-        }
-        // If casting succeeded and ..
-        if (depth)
-        {
-            auto aa = depth.get_depth_frame();
-            cout << aa.get_distance(320,320) << endl;
-        }
+        // }
+        // // If casting succeeded and the arrived frame is from accelerometer stream
+        // if (motion && motion.get_profile().stream_type() == RS2_STREAM_ACCEL && motion.get_profile().format() == RS2_FORMAT_MOTION_XYZ32F)
+        // {
+        //     // Get accelerometer measures
+        //     rs2_vector accel_data = motion.get_motion_data();
+        // }
+        // // If casting succeeded and ..
+        // if (depth)
+        // {
+        //     auto depthMetaData_framenumber = depth.get_frame_number();
+        //     cout << "Frame Number : " << depthMetaData_framenumber << endl;
+        //     if (depthMetaData_framenumber > 30)
+        //     {
+        //         ts1 = depth.get_timestamp();
+        //         cout << "depth: " << ts1 << endl;
+        //         auto depthMetaData_frametimestamp = depth.get_frame_metadata(RS2_FRAME_METADATA_TIME_OF_ARRIVAL);
+        //         cout << "Frame Timestamp : " << depthMetaData_frametimestamp << endl;
+        //     }
+        // }
     });
     pipe2.start(cfg2, [&](rs2::frame frame)
     {
-        // Cast the frame that arrived to motion frame
-        auto motion = frame.as<rs2::motion_frame>();
-        // If casting succeeded and the arrived frame is from gyro stream
-        if (motion && motion.get_profile().stream_type() == RS2_STREAM_GYRO && motion.get_profile().format() == RS2_FORMAT_MOTION_XYZ32F)
-        {
-            // Get the timestamp of the current frame
-            double ts = motion.get_timestamp();
-            // Get gyro measures
-            rs2_vector gyro_data = motion.get_motion_data();
+        // // Cast the frame that arrived to motion frame
+        // auto fset = frame.as<rs2::frameset>();
+        // auto motion = frame.as<rs2::motion_frame>();
+        // auto fisheye = frame.as<rs2::frameset>().get_fisheye_frame();
+        // // If casting succeeded and the arrived frame is from gyro stream
+        // if (motion && motion.get_profile().stream_type() == RS2_STREAM_GYRO && motion.get_profile().format() == RS2_FORMAT_MOTION_XYZ32F)
+        // {
+        //     // Get the timestamp of the current frame
+        //     // ts2 = motion.get_timestamp();
+        //     // Get gyro measures
+        //     rs2_vector gyro_data = motion.get_motion_data();
 
-        }
-        // If casting succeeded and the arrived frame is from accelerometer stream
-        if (motion && motion.get_profile().stream_type() == RS2_STREAM_ACCEL && motion.get_profile().format() == RS2_FORMAT_MOTION_XYZ32F)
-        {
-            // Get accelerometer measures
-            rs2_vector accel_data = motion.get_motion_data();
-        }
+        // }
+        // // If casting succeeded and the arrived frame is from accelerometer stream
+        // if (motion && motion.get_profile().stream_type() == RS2_STREAM_ACCEL && motion.get_profile().format() == RS2_FORMAT_MOTION_XYZ32F)
+        // {
+        //     // Get accelerometer measures
+        //     rs2_vector accel_data = motion.get_motion_data();
+        // }
+
+        // if (fisheye)
+        // {
+        //     auto fisheyeMetaData_framenumber = fisheye.get_frame_number();
+        //     cout << "Frame Number : " << fisheyeMetaData_framenumber << endl;
+        //     if (fisheyeMetaData_framenumber > 30)
+        //     {
+        //         ts2 = fisheye.get_timestamp();
+        //         cout << "fisheye: " << ts2 << endl;
+        //         auto fisheyeMetaData_frametimestamp = fisheye.get_frame_metadata(RS2_FRAME_METADATA_TIME_OF_ARRIVAL);
+        //         cout << "Frame Timestamp(f) : " << fisheyeMetaData_frametimestamp << endl;
+        //     }
+        // }
 
     });
 

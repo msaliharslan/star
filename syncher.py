@@ -6,8 +6,7 @@ Created on Fri Feb  7 18:57:28 2020
 @author: salih
 """
 import pandas
-from matplotlib import pyplot as plt
-import math
+
 
 path1 = "./Intel RealSense D435I/_device_0_sensor_2_Gyro_0_imu_metadata.csv"
 path2 = "./Intel RealSense T265/_device_0_sensor_0_Gyro_0_imu_metadata.csv"
@@ -135,7 +134,7 @@ for i in range(len(t265_all_extracted_tuples_fisheye)):
                 best_tof_difference = current_tof_difference
             
         
-        
+print("çalıştım")
         
         
         

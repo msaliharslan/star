@@ -6,16 +6,17 @@ Created on Thu Feb  6 17:14:44 2020
 @author: salih
 """
 
-import rosbag
+import rosbag, csv
 import os
 import shutil
 
 listOfBagFiles = [f for f in os.listdir(".") if f[-4:] == ".bag"]	#get list of only bag files in current dir.
+numberOfFiles = str(len(listOfBagFiles))
 
 count = 0
 for bagFile in listOfBagFiles:
 	count += 1
-	print "reading file " + str(count) + " of  " + numberOfFiles + ": " + bagFile
+	print ("reading file " + str(count) + " of  " + numberOfFiles + ": " + bagFile)
 	#access bag
 	bag = rosbag.Bag(bagFile)
 	bagContents = bag.read_messages()
@@ -23,11 +24,11 @@ for bagFile in listOfBagFiles:
 
 
 	#create a new directory
-	folder = string.rstrip(bagName, ".bag")
+	folder = bagName.rstrip('.bag')
 	try:	#else already exists
 		os.makedirs(folder)
 	except:
-		print "could not create folder"
+		print ("could not create folder")
 		pass
 	shutil.copyfile(bagName, folder + '/' + bagName)
 
@@ -41,7 +42,7 @@ for bagFile in listOfBagFiles:
 
 	for topicName in listOfTopics:
 		#Create a new CSV file for each topic
-		filename = folder + '/' + string.replace(topicName, '/', '_') + '.csv'
+		filename = folder + '/' + topicName.replace( '/', '_') + '.csv'
 		with open(filename, 'w+') as csvfile:
 			filewriter = csv.writer(csvfile, delimiter = ',')
 			firstIteration = True	#allows header row
@@ -49,12 +50,12 @@ for bagFile in listOfBagFiles:
 				#parse data from this instant, which is of the form of multiple lines of "Name: value\n"
 				#	- put it in the form of a list of 2-element lists
 				msgString = str(msg)
-				msgList = string.split(msgString, '\n')
+				msgList = msgString.split('\n')
 				instantaneousListOfData = []
 				for nameValuePair in msgList:
-					splitPair = string.split(nameValuePair, ':')
+					splitPair = nameValuePair.split(':')
 					for i in range(len(splitPair)):	#should be 0 to 1
-						splitPair[i] = string.strip(splitPair[i])
+						splitPair[i] = splitPair[i].strip()
 					instantaneousListOfData.append(splitPair)
 				#write the first row from the first element of each pair
 				if firstIteration:	# header
@@ -70,4 +71,4 @@ for bagFile in listOfBagFiles:
 						values.append(pair[1])
 				filewriter.writerow(values)
 	bag.close()
-print "Done reading all " + numberOfFiles + " bag files."
+print ("Done reading all " + numberOfFiles + " bag files.")
