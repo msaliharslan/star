@@ -59,7 +59,7 @@ for i in range(0, d435_acc_metadata.shape[0]):
         
 # t265 fiheye extracting all time of arrivals with corresponding rosbag timestamps
 for i in range(0, t265_fisheye_metadata.shape[0]):
-    if (t265_fisheye_metadata.iloc[i,1] == '"Time Of Arrival"'):
+    if (t265_fisheye_metadata.iloc[i,1] == '"Frame Timestamp"'):
         current_tof = int(t265_fisheye_metadata.iloc[i, 2][1:-1])
         current_rts = t265_fisheye_metadata.iloc[i, 0]
         t265_all_extracted_tuples_fisheye.append( (current_rts, current_tof) )
@@ -67,14 +67,14 @@ for i in range(0, t265_fisheye_metadata.shape[0]):
 
 # t265 gyro extracting all time of arrivals with corresponding rosbag timestamps
 for i in range(0, t265_gyro_metadata.shape[0]):
-    if (t265_gyro_metadata.iloc[i,1] == '"Time Of Arrival"'):
+    if (t265_gyro_metadata.iloc[i,1] == '"Frame Timestamp"'):
         current_tof = int(t265_gyro_metadata.iloc[i, 2][1:-1])
         current_rts = t265_gyro_metadata.iloc[i, 0]
         t265_all_extracted_tuples_gyro.append( (current_rts, current_tof) )  
         
 # t265 acc extracting all time of arrivals with corresponding rosbag timestamps
 for i in range(0, t265_acc_metadata.shape[0]):
-    if (t265_acc_metadata.iloc[i,1] == '"Time Of Arrival"'):
+    if (t265_acc_metadata.iloc[i,1] == '"Frame Timestamp"'):
         current_tof = int(t265_acc_metadata.iloc[i, 2][1:-1])
         current_rts = t265_acc_metadata.iloc[i, 0]
         t265_all_extracted_tuples_acc.append( (current_rts, current_tof) ) 
@@ -134,17 +134,7 @@ for i in range(len(t265_all_extracted_tuples_fisheye)):
                 best_tof_difference = current_tof_difference
             
         
-print("çalıştım")
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
         
         
         
