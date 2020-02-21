@@ -3,13 +3,41 @@
 #include <iostream>
 #include <unistd.h>
 #include <string>
+#include <thread>
 
 using namespace rs2;
 using namespace std;
 
+const size_t len = 50;
+const size_t frame_number_wait = 30;
+long long toa1[len], toa2[len];
+int index1 = 0, index2 = 0, append_flag = 0;
+
+void recordValidator(){
+    const int time_difference_threshold = 10;
+    while(true){
+        if(index1 == index2 && index1 == len){
+
+            for(int i=0; i < len; i++){
+                for(int j=0; j < len; j++){
+                    if( abs(toa1[i] - toa2[j]) < time_difference_threshold ){
+                        cout << "\tvay anam vay babam" << endl;
+                        return;
+                    } 
+                }
+            }
+            cout << "\tzaaaaaaaaaaa" << endl;
+            return;
+        }
+        sleep(1);
+    }
+}
+
 
 int main(int argc, char **argv) try {
 
+    std::thread Flag (recordValidator);
+   
     rs2::config cfg1, cfg2;
     rs2::device dev;
     rs2::colorizer color_map;
@@ -73,13 +101,18 @@ int main(int argc, char **argv) try {
         if (fset)
         {
             auto depthMetaData_framenumber = depth.get_frame_number();
-            cout << "Frame Number of Depth: " << depthMetaData_framenumber << endl;
-            if (depthMetaData_framenumber > 30)
+            // cout << "Frame Number of Depth: " << depthMetaData_framenumber << endl;
+            if (depthMetaData_framenumber > frame_number_wait)
             {
+                if (depthMetaData_framenumber == frame_number_wait + 1) append_flag ++;
                 // ts1 = depth.get_timestamp();
                 // cout << "depth: " << ts1 << endl;
                 auto depthMetaData_frametimestamp = depth.get_frame_metadata(RS2_FRAME_METADATA_TIME_OF_ARRIVAL);
-                cout << "Frame Timestamp : " << depthMetaData_frametimestamp << endl;
+                // cout << "Frame Timestamp : " << depthMetaData_frametimestamp << endl;
+                if(append_flag == 2 && index1 < len){
+                    toa1[index1] = depthMetaData_frametimestamp;
+                    index1++;
+                }
             }
         }
     });
@@ -108,13 +141,18 @@ int main(int argc, char **argv) try {
         if (fisheye)
         {
             auto fisheyeMetaData_framenumber = fisheye.get_frame_number();
-            cout << "Frame Number of fisheye: " << fisheyeMetaData_framenumber << endl;
-            if (fisheyeMetaData_framenumber > 30)
+            // cout << "Frame Number of fisheye: " << fisheyeMetaData_framenumber << endl;
+            if (fisheyeMetaData_framenumber > frame_number_wait)
             {
+                if (fisheyeMetaData_framenumber == frame_number_wait + 1) append_flag ++;
                 ts2 = fisheye.get_timestamp();
-                cout << "fisheye: " << long(ts2) << endl;
+                // cout << "fisheye: " << (long long)(ts2) << endl;
                 // auto fisheyeMetaData_frametimestamp = fisheye.get_frame_metadata(RS2_FRAME_METADATA_TIME_OF_ARRIVAL);
                 // cout << "Frame Timestamp(f) : " << fisheyeMetaData_frametimestamp << endl;
+                if(append_flag == 2 && index1 < len){
+                    toa2[index2] = ts2;
+                    index2++;
+                }
             }
         }
 

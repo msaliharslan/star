@@ -100,43 +100,44 @@ acc_time_delay_2 = (d435_all_extracted_tuples_acc[0][1] - t265_all_extracted_tup
 gyro_time_delay = delay_gyro_float * gyro_time_diff_const 
 gyro_time_delay_2 = (d435_all_extracted_tuples_gyro[0][1] - t265_all_extracted_tuples_gyro[0][1] * 1e-3)
 
-Rs = []
-for sample in range(8, sample_window):
+# Rs = []
+# for sample in range(8, sample_window):
     
-    v1 = unit_vector(gyro1.iloc[sample * sample_stride,:])
-    v2 = unit_vector(gyro1.iloc[sample * sample_stride + 10,:])
-    v3 = unit_vector(gyro1.iloc[sample * sample_stride + 20,:])    
+#     v1 = unit_vector(gyro1.iloc[sample * sample_stride,:])
+#     v2 = unit_vector(gyro1.iloc[sample * sample_stride + 10,:])
+#     v3 = unit_vector(gyro1.iloc[sample * sample_stride + 20,:])    
     
-    v4_0 = unit_vector(gyro2.iloc[sample * sample_stride      + delay_gyro, :])
-    v5_0 = unit_vector(gyro2.iloc[sample * sample_stride + 10 + delay_gyro, :])
-    v6_0 = unit_vector(gyro2.iloc[sample * sample_stride + 20 + delay_gyro, :])
+#     v4_0 = unit_vector(gyro2.iloc[sample * sample_stride      + delay_gyro - 1, :])
+#     v5_0 = unit_vector(gyro2.iloc[sample * sample_stride + 10 + delay_gyro - 1, :])
+#     v6_0 = unit_vector(gyro2.iloc[sample * sample_stride + 20 + delay_gyro - 1, :])
 
-    v4_1 = unit_vector(gyro2.iloc[sample * sample_stride      + delay_gyro, :])
-    v5_1 = unit_vector(gyro2.iloc[sample * sample_stride + 10 + delay_gyro, :])
-    v6_1 = unit_vector(gyro2.iloc[sample * sample_stride + 20 + delay_gyro, :])
+#     v4_1 = unit_vector(gyro2.iloc[sample * sample_stride      + delay_gyro + 0, :])
+#     v5_1 = unit_vector(gyro2.iloc[sample * sample_stride + 10 + delay_gyro + 0, :])
+#     v6_1 = unit_vector(gyro2.iloc[sample * sample_stride + 20 + delay_gyro + 0, :])
     
-    v4_2 = unit_vector(gyro2.iloc[sample * sample_stride      + delay_gyro, :])
-    v5_2 = unit_vector(gyro2.iloc[sample * sample_stride + 10 + delay_gyro, :])
-    v6_2 = unit_vector(gyro2.iloc[sample * sample_stride + 20 + delay_gyro, :])
+#     v4_2 = unit_vector(gyro2.iloc[sample * sample_stride      + delay_gyro + 1, :])
+#     v5_2 = unit_vector(gyro2.iloc[sample * sample_stride + 10 + delay_gyro + 1, :])
+#     v6_2 = unit_vector(gyro2.iloc[sample * sample_stride + 20 + delay_gyro + 1, :])
         
-    if ( (delay_gyro_float - delay_gyro) > 0):
-        v4 = lineFit( [v4_1, v4_2],  delay_gyro_float - delay_gyro)
-        v5 = lineFit( [v5_1, v5_2],  delay_gyro_float - delay_gyro)
-        v6 = lineFit( [v6_1, v6_2],  delay_gyro_float - delay_gyro)
-    else:
-        v4 = lineFit( [v4_0, v4_1],  delay_gyro_float - delay_gyro + 1)
-        v5 = lineFit( [v5_0, v5_1],  delay_gyro_float - delay_gyro + 1)
-        v6 = lineFit( [v6_0, v6_1],  delay_gyro_float - delay_gyro + 1)
+#     if ( (delay_gyro_float - delay_gyro) > 0):
+#         v4 = unit_vector(lineFit( [v4_1, v4_2],  delay_gyro_float - delay_gyro))
+#         v5 = unit_vector(lineFit( [v5_1, v5_2],  delay_gyro_float - delay_gyro))
+#         v6 = unit_vector(lineFit( [v6_1, v6_2],  delay_gyro_float - delay_gyro))
+#     else:
+#         v4 = unit_vector(lineFit( [v4_0, v4_1],  delay_gyro_float - delay_gyro + 1))
+#         v5 = unit_vector(lineFit( [v5_0, v5_1],  delay_gyro_float - delay_gyro + 1))
+#         v6 = unit_vector(lineFit( [v6_0, v6_1],  delay_gyro_float - delay_gyro + 1))
         
 
-    v7 = np.stack( (v1, v2, v3), -1 )
-    v8 = np.stack( (v4, v5, v6), -1 ) 
-    R = np.dot( np.linalg.inv(salih.orth(v7)), salih.orth(v8))
-    Rs.append(R)
+#     v7 = np.stack( (v1, v2, v3), -1 )
+#     v8 = np.stack( (v4, v5, v6), -1 ) 
+#     R = np.dot( np.linalg.inv(salih.orth(v7)), salih.orth(v8))
+#     Rs.append(R)
+
     
-    print("**************\n")
-    print(R)
-    print("\n")
+    # print("**************\n")
+    # print(R)
+    # print("\n")
     
     # print("aaa: ", angle_between(v1,v2) * 180 / np.pi)
     # print("-------------------------------")
@@ -178,7 +179,7 @@ for sample in range(8, sample_window):
 #         else:
 #             best_tof_diff_accVsGyro = current_tof_difference
        
-#     otherSideAccTOF = t265_all_extracted_tuples_acc[ initial_selected_acc_index + delay_acc ][1]
+#     otherSideAccTOF = t265_all_extracted_tuples_acc[ initial_selected_acc_index + delay_acc ][1] 
 #     otherSideGyroTOF = t265_all_extracted_tuples_gyro[ best_gyro_index + delay_gyro ][1]
     
 #     print("this side tof dif : ", best_tof_diff_accVsGyro)
@@ -188,7 +189,243 @@ for sample in range(8, sample_window):
 
 
 
+######################################################
+#### SVD using all samples ###########################
+#### gyro ######################################
+zero = np.array( [0, 0, 0] )
+limit = min( len(gyro1), len(gyro2) ) - abs(delay_gyro)
+first_iteration = True
+matched_vectors_linearfit = []
+for i in range( abs(delay_gyro), limit-2):
 
+    v1 = unit_vector(gyro1.iloc[i,:])
+    
+    v2_0 = unit_vector(gyro2.iloc[i - 1 + delay_gyro, :])
+    v2_1 = unit_vector(gyro2.iloc[i + 0 + delay_gyro, :])
+    v2_2 = unit_vector(gyro2.iloc[i + 1 + delay_gyro, :])
+    
+    if ( np.amax(np.isnan( (v1,v2_0, v2_1, v2_2)) ) ):
+        continue
+     
+    if ( (delay_gyro_float - delay_gyro) > 0):
+        v2 = unit_vector(lineFit( [v2_1, v2_2],  delay_gyro_float - delay_gyro))
+    else:
+        v2 = unit_vector(lineFit( [v2_0, v2_1],  delay_gyro_float - delay_gyro + 1))
+
+    
+    matched_vectors_linearfit.append( (v1, v2) )
+    
+    if(first_iteration):
+        A = np.stack((v1))
+        B = np.stack((v2))
+        first_iteration = False
+
+    A = np.vstack((A, v1))
+    B = np.vstack((B, v2))
+
+    
+    
+    # row1 = np.concatenate( (zero, -1 * v2[2] * v1, v2[1] * v1) )
+    # row2 = np.concatenate( (v2[2] * v1, zero, -1 * v2[0] * v1) )
+    # Ai = np.vstack( (row1, row2) )
+    
+    # if (first_iteration):
+    #     A = np.stack( (Ai) )
+    #     first_iteration = False
+    
+    # A = np.vstack( (A, Ai) )
+
+# R = np.linalg.svd(A)[2].T[:,-1].reshape(3,3)
+R = np.linalg.lstsq(A,B)[0]
+print("Calculated rotation matrix from acc data: ", isRotationMatrix(R))
+
+########## acc #######################
+limit = min( len(acc1), len(acc2) ) - abs(delay_acc)
+first_iteration = True
+matched_vectors_linearfit_acc = []
+for i in range( abs(delay_acc) +2, limit -2):
+
+    v1 = unit_vector(acc1.iloc[i,:])
+    
+    
+    v2_0 = unit_vector(acc2.iloc[i - 1 + delay_acc, :])
+    v2_1 = unit_vector(acc2.iloc[i + 0 + delay_acc, :])
+    v2_2 = unit_vector(acc2.iloc[i + 1 + delay_acc, :])
+    
+    if ( np.amax(np.isnan( (v1,v2_0, v2_1, v2_2)) ) ):
+        continue
+     
+    if ( (delay_acc_float - delay_acc) > 0):
+        v2 = unit_vector(lineFit( [v2_1, v2_2],  delay_acc_float - delay_acc))
+    else:
+        v2 = unit_vector(lineFit( [v2_0, v2_1],  delay_acc_float - delay_acc + 1))
+
+    matched_vectors_linearfit_acc.append( (v1, v2) )
+    
+    if(first_iteration):
+        A = np.stack((v1))
+        B = np.stack((v2))
+        first_iteration = False
+
+    A = np.vstack((A, v1))
+    B = np.vstack((B, v2))
+
+    
+    
+    # row1 = np.concatenate( (zero, -1 * v2[2] * v1, v2[1] * v1) )
+    # row2 = np.concatenate( (v2[2] * v1, zero, -1 * v2[0] * v1) )
+    # Ai = np.vstack( (row1, row2) )
+    
+    # if (first_iteration):
+    #     A = np.stack( (Ai) )
+    #     first_iteration = False
+    
+    # A = np.vstack( (A, Ai) )
+
+# R = np.linalg.svd(A)[2].T[:,-1].reshape(3,3)
+R_acc = np.linalg.lstsq(A,B)[0]
+print("Calculated rotation matrix from acc data: ", isRotationMatrix(R_acc))
+
+
+
+##########################################################
+################ reprojection error #########################
+################ gyro #####################################
+rpro_err_mag = []
+rpro_err_ang = []
+rpro_err_x = []
+rpro_err_y = []
+rpro_err_z = []
+for v1, v2 in matched_vectors_linearfit:
+    v1 = np.dot(R, np.transpose(v1))
+    rpro_err_mag.append(np.linalg.norm(v2 - v1))
+    rpro_err_ang.append(angle_between(v1, v2) * 180 / np.pi)
+    rpro_err_x.append( v2[0] - v1[0] )
+    rpro_err_y.append( v2[1] - v1[1] )
+    rpro_err_z.append( v2[2] - v1[2] )
+
+
+
+figen_old = plt.figure(4)
+figen_old.suptitle('GYRO')
+plt.title("Reprojection Error Magnitude")
+plt.subplot(221)
+plt.plot(range(len(matched_vectors_linearfit)), rpro_err_mag, 'r', label="magnitude", linewidth=1)
+plt.legend()
+plt.subplot(222)
+plt.plot(range(len(matched_vectors_linearfit)), rpro_err_x, 'g', label="x", linewidth=1 )
+plt.legend()
+plt.subplot(223)
+plt.plot(range(len(matched_vectors_linearfit)), rpro_err_y, 'b', label="y", linewidth=1)
+plt.legend()
+plt.subplot(224)
+plt.plot(range(len(matched_vectors_linearfit)), rpro_err_z, 'purple', label="z", linewidth=1)
+plt.legend()
+plt.figure(5)
+plt.plot(range(len(matched_vectors_linearfit)), rpro_err_ang, label="angle", linewidth=1) 
+plt.title("Reprojection Error Angle")
+
+################## acc ##########################################
+rpro_err_mag = []
+rpro_err_ang = []
+rpro_err_x = []
+rpro_err_y = []
+rpro_err_z = []
+for v1, v2 in matched_vectors_linearfit_acc:
+    v1 = np.dot(R, np.transpose(v1))
+    rpro_err_mag.append(np.linalg.norm(v2 - v1))
+    rpro_err_ang.append(angle_between(v1, v2) * 180 / np.pi)
+    rpro_err_x.append( v2[0] - v1[0] )
+    rpro_err_y.append( v2[1] - v1[1] )
+    rpro_err_z.append( v2[2] - v1[2] )
+
+
+
+figen = plt.figure(6)
+figen.suptitle('ACC')
+plt.title("Reprojection Error Magnitude")
+plt.subplot(221)
+plt.plot(range(len(matched_vectors_linearfit_acc)), rpro_err_mag, 'r', label="magnitude", linewidth=1)
+plt.legend()
+plt.subplot(222)
+plt.plot(range(len(matched_vectors_linearfit_acc)), rpro_err_x, 'g', label="x", linewidth=1 )
+plt.legend()
+plt.subplot(223)
+plt.plot(range(len(matched_vectors_linearfit_acc)), rpro_err_y, 'b', label="y", linewidth=1)
+plt.legend()
+plt.subplot(224)
+plt.plot(range(len(matched_vectors_linearfit_acc)), rpro_err_z, 'purple', label="z", linewidth=1)
+plt.legend()
+plt.figure(7)
+plt.plot(range(len(matched_vectors_linearfit_acc)), rpro_err_ang, label="angle", linewidth=1) 
+plt.title("Reprojection Error Angle")
+
+######################################################
+
+# windowSize = 100
+# shiftMax = 50
+# biasIndex = shiftMax + 10
+
+# innerBag = []
+
+# for i in range(-shiftMax, shiftMax+1):
+#     inner = 0
+#     for j in range(windowSize):
+#         projected = np.dot(R, np.transpose(matched_vectors_linearfit[biasIndex + i + j][0]))
+#         inner += np.dot(projected, matched_vectors_linearfit[biasIndex + j][1])
+    
+#     innerBag.append(inner)
+
+# plt.figure(8)
+# plt.plot(range(-shiftMax, shiftMax + 1), innerBag)
+# plt.title("Cross correlation")
+# plt.grid('both')
+    
+    
+##########################################################
+######## making rotation matrix orthogonal ##############
+Y = np.dot(np.transpose(R), R) - np.identity(3)
+Q = R - np.dot( np.dot(R, Y), (0.5*np.identity(3) - 3/8 * Y + 5/16 * np.dot(Y,Y)  ) )
+    
+##### Reprojection error using this matrix #############
+rpro_err_mag = []
+rpro_err_ang = []
+rpro_err_x = []
+rpro_err_y = []
+rpro_err_z = []
+for v1, v2 in matched_vectors_linearfit:
+    v1 = np.dot(Q, np.transpose(v1))
+    rpro_err_mag.append(np.linalg.norm(v2 - v1))
+    rpro_err_ang.append(angle_between(v1, v2) * 180 / np.pi)
+    rpro_err_x.append( v2[0] - v1[0] )
+    rpro_err_y.append( v2[1] - v1[1] )
+    rpro_err_z.append( v2[2] - v1[2] )
+
+
+
+figen_old = plt.figure(8)
+figen_old.suptitle('Orthogonalized')
+plt.title("Reprojection Error Magnitude using orthogonalized matrix")
+plt.subplot(221)
+plt.plot(range(len(matched_vectors_linearfit)), rpro_err_mag, 'r', label="magnitude", linewidth=1)
+plt.legend()
+plt.subplot(222)
+plt.plot(range(len(matched_vectors_linearfit)), rpro_err_x, 'g', label="x", linewidth=1 )
+plt.legend()
+plt.subplot(223)
+plt.plot(range(len(matched_vectors_linearfit)), rpro_err_y, 'b', label="y", linewidth=1)
+plt.legend()
+plt.subplot(224)
+plt.plot(range(len(matched_vectors_linearfit)), rpro_err_z, 'purple', label="z", linewidth=1)
+plt.legend()
+plt.figure(9)
+plt.plot(range(len(matched_vectors_linearfit)), rpro_err_ang, label="angle", linewidth=1) 
+plt.title("Reprojection Error Angle") 
+
+    
+
+    
+    
 
 
 

@@ -1,5 +1,6 @@
 *.cmake
 *.bag
+*.html
 /Intel*RealSense*D435I
 /Intel*RealSense*T265
 /CMakeFiles
