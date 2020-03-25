@@ -1,0 +1,15 @@
+tester.py { all test functions, like testRotationMatrix, will reside here}
+
+fetcher.py{ all fetch functions will reside in this module}
+
+recorder.py { the functions inside this module will have input and they will record this input
+to the files residing inside records folder.}
+
+evaluaters // folder
+
+    rotationMatrixEvaluater.py
+    correlationEvaluater.py ??
+
+records // folder
+
+    timeDelay.txt
