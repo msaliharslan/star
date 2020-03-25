@@ -85,6 +85,13 @@ sample_stride = 25
 delay_acc = (range(-acc_lim, acc_lim + 1))[np.argmin(coverience_box)]
 delay_gyro = (range(-gyro_lim, gyro_lim + 1))[np.argmin(coverience_box_2)]
 
+tempMinLen = min(len(d435_all_extracted_tuples_gyro), len(t265_all_extracted_tuples_gyro))
+
+for i in range(tempMinLen - 2 * delay_gyro-20):
+    
+    print(d435_all_extracted_tuples_gyro[i][1] - t265_all_extracted_tuples_gyro[i+delay_gyro][1])
+
+
 c_gyro =  coverience_box_2[delay_gyro + gyro_lim]
 b_gyro = (coverience_box_2[delay_gyro + gyro_lim + 1] - coverience_box_2[delay_gyro + gyro_lim - 1] ) / 2
 a_gyro =  coverience_box_2[delay_gyro + gyro_lim + 1] - b_gyro - c_gyro
@@ -96,13 +103,13 @@ a_acc =  coverience_box[delay_acc + acc_lim + 1] - b_acc - c_acc
 delay_acc_float = -b_acc/(2 * a_acc) + delay_acc
 delay_gyro_float = -b_gyro/(2 * a_gyro) + delay_gyro
 acc_time_delay = delay_acc_float * acc_time_diff_const
-acc_time_delay_2 = (d435_all_extracted_tuples_acc[0][1] - t265_all_extracted_tuples_acc[0][1] * 1e-3) 
+acc_time_delay_2 = (d435_all_extracted_tuples_acc[100][1] - t265_all_extracted_tuples_acc[100][1] ) 
 gyro_time_delay = delay_gyro_float * gyro_time_diff_const 
-gyro_time_delay_2 = (d435_all_extracted_tuples_gyro[0][1] - t265_all_extracted_tuples_gyro[0][1] * 1e-3)
+gyro_time_delay_2 = (d435_all_extracted_tuples_gyro[100][1] - t265_all_extracted_tuples_gyro[110][1] )
 
 # Rs = []
 # for sample in range(8, sample_window):
-    
+#     remove unit_vectors might be neccessary
 #     v1 = unit_vector(gyro1.iloc[sample * sample_stride,:])
 #     v2 = unit_vector(gyro1.iloc[sample * sample_stride + 10,:])
 #     v3 = unit_vector(gyro1.iloc[sample * sample_stride + 20,:])    
@@ -198,19 +205,19 @@ first_iteration = True
 matched_vectors_linearfit = []
 for i in range( abs(delay_gyro), limit-2):
 
-    v1 = unit_vector(gyro1.iloc[i,:])
+    v1 = gyro1.iloc[i,:]
     
-    v2_0 = unit_vector(gyro2.iloc[i - 1 + delay_gyro, :])
-    v2_1 = unit_vector(gyro2.iloc[i + 0 + delay_gyro, :])
-    v2_2 = unit_vector(gyro2.iloc[i + 1 + delay_gyro, :])
+    v2_0 = gyro2.iloc[i - 1 + delay_gyro, :]
+    v2_1 = gyro2.iloc[i + 0 + delay_gyro, :]
+    v2_2 = gyro2.iloc[i + 1 + delay_gyro, :]
     
     if ( np.amax(np.isnan( (v1,v2_0, v2_1, v2_2)) ) ):
         continue
      
     if ( (delay_gyro_float - delay_gyro) > 0):
-        v2 = unit_vector(lineFit( [v2_1, v2_2],  delay_gyro_float - delay_gyro))
+        v2 = lineFit( [v2_1, v2_2],  delay_gyro_float - delay_gyro)
     else:
-        v2 = unit_vector(lineFit( [v2_0, v2_1],  delay_gyro_float - delay_gyro + 1))
+        v2 = lineFit( [v2_0, v2_1],  delay_gyro_float - delay_gyro + 1)
 
     
     matched_vectors_linearfit.append( (v1, v2) )
@@ -245,20 +252,20 @@ first_iteration = True
 matched_vectors_linearfit_acc = []
 for i in range( abs(delay_acc) +2, limit -2):
 
-    v1 = unit_vector(acc1.iloc[i,:])
+    v1 = acc1.iloc[i,:]
     
     
-    v2_0 = unit_vector(acc2.iloc[i - 1 + delay_acc, :])
-    v2_1 = unit_vector(acc2.iloc[i + 0 + delay_acc, :])
-    v2_2 = unit_vector(acc2.iloc[i + 1 + delay_acc, :])
+    v2_0 = acc2.iloc[i - 1 + delay_acc, :]
+    v2_1 = acc2.iloc[i + 0 + delay_acc, :]
+    v2_2 = acc2.iloc[i + 1 + delay_acc, :]
     
     if ( np.amax(np.isnan( (v1,v2_0, v2_1, v2_2)) ) ):
         continue
      
     if ( (delay_acc_float - delay_acc) > 0):
-        v2 = unit_vector(lineFit( [v2_1, v2_2],  delay_acc_float - delay_acc))
+        v2 = lineFit( [v2_1, v2_2],  delay_acc_float - delay_acc)
     else:
-        v2 = unit_vector(lineFit( [v2_0, v2_1],  delay_acc_float - delay_acc + 1))
+        v2 = lineFit( [v2_0, v2_1],  delay_acc_float - delay_acc + 1)
 
     matched_vectors_linearfit_acc.append( (v1, v2) )
     
@@ -385,7 +392,7 @@ plt.title("Reprojection Error Angle")
 ##########################################################
 ######## making rotation matrix orthogonal ##############
 Y = np.dot(np.transpose(R), R) - np.identity(3)
-Q = R - np.dot( np.dot(R, Y), (0.5*np.identity(3) - 3/8 * Y + 5/16 * np.dot(Y,Y)  ) )
+Q = R - np.dot( np.dot(R, Y), (0.5*np.identity(3) - 3/8 * Y + 5/16 * np.dot(Y,Y) - 35 / 128 * np.linalg.matrix_power(Y,4)  ) )
     
 ##### Reprojection error using this matrix #############
 rpro_err_mag = []

@@ -74,9 +74,10 @@ int main(int argc, char **argv) try {
     cfg2.enable_stream(RS2_STREAM_FISHEYE, 2);
     cfg2.enable_record_to_file(string(devices[1].get_info(RS2_CAMERA_INFO_NAME)) + ".bag");
 
-
+    cout << "after config" << endl; 
     double ts1, ts2;
     pipeline pipe1(ctx), pipe2(ctx);
+    cout << "after pipeline" << endl; 
     pipe1.start(cfg1, [&](rs2::frame frame)
     {
         // Cast the frame that arrived to motion frame

@@ -1,0 +1,9 @@
+http://docs.ros.org/kinetic/api/librealsense2/html/rs__frame_8h.html // This site has all the details for the variables used in this doc.
+
+Timestamp domain determines in which domain the datas are captured
+
+We used RS2_TIMESTAMP_DOMAIN_GLOBAL_TIME for our gyro and acc data 
+
+We used TIME_OF_ARRIVAL as our time stamp for gyro and acc data 
+
+

@@ -1,0 +1,4 @@
+https://www.quora.com/How-can-I-quickly-compute-the-nearest-orthogonal-matrix-or-rotation-matrix-to-a-given-3x3-matrix
+above site offers a way to calculate the nearest orthogonal matrix to a given matrix
+
+
