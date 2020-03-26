@@ -2,7 +2,7 @@ import pandas
 from matplotlib import pyplot as plt
 import math
 import numpy as np
-from helper import *
+from utility import *
 import scipy.linalg as salih
 from syncher import  *
 
@@ -41,7 +41,7 @@ for i in range(gyro2.shape[0]):
     
 
 coverience_box = []
-acc_lim = 50
+acc_lim = 100
 acc_bias = int((acc1.shape[0] + acc2.shape[0]) / 4)
 gyro_lim = 100
 gyro_bias = int((gyro1.shape[0] + gyro2.shape[0]) / 4)

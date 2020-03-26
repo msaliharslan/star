@@ -6,12 +6,12 @@ from correlation import *
 
 def calculateRotationMatrixFromGyros(dataIndexBias, windowLength): #this functions requires gyro values fetched
 
-    correlationBox,_,_ = createCorrelationBoxForGyros_Mag(data.gyro_d435i, data.gyro_t265, windowLength)
+    correlationBox,_,_,indexes = createCorrelationBoxForGyros_Mag(data.gyro_d435i, data.gyro_t265, windowLength)
 
     gyro_longer = data.gyro_d435i if data.gyro_d435i.shape[0] > data.gyro_t265.shape[0] else data.gyro_t265
     gyro_shorter = data.gyro_d435i if data.gyro_d435i.shape[0] <= data.gyro_t265.shape[0] else data.gyro_t265
 
-    delay_float_index = getFloatIndexDelayForGivenCorrelationBox(correlationBox) # delay is added to the longer one, since this delay is calculated keeping shorter one still
+    delay_float_index = getFloatIndexDelayForGivenCorrelationBox(correlationBox, indexes[0]) # delay is added to the longer one, since this delay is calculated keeping shorter one still
 
     matched_vectors_linearfit = []
 
@@ -50,12 +50,12 @@ def calculateRotationMatrixFromGyros(dataIndexBias, windowLength): #this functio
 
 def calculateRotationMatrixFromAccs(dataIndexBias, windowLength): #this functions requires acc values fetched
 
-    correlationBox,_,_ = createCorrelationBoxForAccs_Mag(data.acc_d435i, data.acc_t265, windowLength)
+    correlationBox,_,_,indexes = createCorrelationBoxForAccs_Mag(data.acc_d435i, data.acc_t265, windowLength)
 
     acc_longer = data.acc_d435i if data.acc_d435i.shape[0] > data.acc_t265.shape[0] else data.acc_t265
     acc_shorter = data.acc_d435i if data.acc_d435i.shape[0] <= data.acc_t265.shape[0] else data.acc_t265
 
-    delay_float_index = getFloatIndexDelayForGivenCorrelationBox(correlationBox) # delay is added to the longer one, since this delay is calculated keeping shorter one still
+    delay_float_index = getFloatIndexDelayForGivenCorrelationBox(correlationBox, indexes[0]) # delay is added to the longer one, since this delay is calculated keeping shorter one still
 
     matched_vectors_linearfit = []
 
