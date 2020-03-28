@@ -14,8 +14,8 @@ import matplotlib.pyplot as plt
 
 
 fetcher.fetchAllData()
-corelationBox,_,_, a = createCorrelationBoxForAccs_Mag(fetcher.acc_d435i, fetcher.acc_t265, 100)
-plt.plot(range(a[0], a[1]), corelationBox)
-floating_delay = getFloatIndexDelayForGivenCorrelationBox(corelationBox, a[0])
-
+coverianceBox,_,_, a = createCoverianceBoxForGyros_Mag(fetcher.gyro_d435i, fetcher.gyro_t265, 400)
+plt.plot(range(a[0], a[1]), coverianceBox)
+floating_delay = getFloatIndexDelayForGivenCoverianceBox(coverianceBox, a[0])
+print(floating_delay)
 #R = calculateRotationMatrixFromAccs(90, 100)

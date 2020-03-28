@@ -4,9 +4,10 @@
 '''
 
 import math
+import numpy as np
 
 
-def createCorrelationBoxForAccs_Mag(acc_d435i, acc_t265, windowLength):
+def createCoverianceBoxForAccs_Mag(acc_d435i, acc_t265, windowLength):
 
     #input validity checks
     if(min(acc_d435i.shape[0], acc_t265.shape[0]) <= windowLength):
@@ -41,7 +42,7 @@ def createCorrelationBoxForAccs_Mag(acc_d435i, acc_t265, windowLength):
         magAcc_longer = magAcc_d435i
 
     
-    correlationBox = []
+    coverianceBox = []
 
     startIndex = int(len(magAcc_shorter) / 2)
 
@@ -52,17 +53,14 @@ def createCorrelationBoxForAccs_Mag(acc_d435i, acc_t265, windowLength):
     maxSlideLeftRange = startIndex - int(len(magAcc_shorter) / 8)
     
     for i in range(-maxSlideLeftRange,maxSlideRightRange):
-        total = 0
-        for j in range(windowLength):
-            total += (magAcc_shorter[startIndex + j] * magAcc_longer[startIndex + i +j])
-        correlationBox.append(total)
+        covarianceBox.append(np.cov([magAcc_shorter[startIndex:startIndex+windowLength], magAcc_longer[startIndex+i:startIndex+i+windowLength]])[0,1])
 
     print("Correlationbox for acc is calculated while fixing ", holdStillName)    
             
-    return correlationBox, magAcc_longer, magAcc_shorter, (-maxSlideLeftRange, maxSlideRightRange)
+    return covarianceBox, magAcc_longer, magAcc_shorter, (-maxSlideLeftRange, maxSlideRightRange)
 
 
-def createCorrelationBoxForGyros_Mag(gyro_d435i, gyro_t265, windowLength):
+def createCoverianceBoxForGyros_Mag(gyro_d435i, gyro_t265, windowLength):
 
     #input validity checks
     if(min(gyro_d435i.shape[0], gyro_t265.shape[0]) <= windowLength):
@@ -95,7 +93,7 @@ def createCorrelationBoxForGyros_Mag(gyro_d435i, gyro_t265, windowLength):
         magGyro_shorter = magGyro_t265
         magGyro_longer = magGyro_d435i
 
-    correlationBox = []
+    covarianceBox = []
 
     startIndex = int(len(magGyro_shorter) / 2)
 
@@ -106,12 +104,10 @@ def createCorrelationBoxForGyros_Mag(gyro_d435i, gyro_t265, windowLength):
     maxSlideLeftRange = startIndex - int(len(magGyro_shorter) / 8)
     
     for i in range(-maxSlideLeftRange,maxSlideRightRange):
-        total = 0
-        for j in range(windowLength):
-            total += (magGyro_shorter[startIndex + j] * magGyro_longer[startIndex + i +j])
-        correlationBox.append(total)
+        covarianceBox.append(np.cov([magGyro_shorter[startIndex:startIndex+windowLength], magGyro_longer[startIndex+i:startIndex+i+windowLength]])[0,1])
+        
 
     print("Correlationbox for gyro is calculated while fixing ", holdStillName)    
             
-    return correlationBox, magGyro_longer, magGyro_shorter, (-maxSlideLeftRange,maxSlideRightRange)
+    return covarianceBox, magGyro_longer, magGyro_shorter, (-maxSlideLeftRange,maxSlideRightRange)
 

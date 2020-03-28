@@ -1,17 +1,17 @@
 import numpy as np
 
 
-def getIntIndexDelayForAccs(correlationBox, slideLeftIndex):
-    return np.argmax(correlationBox) + slideLeftIndex
-def getIntIndexDelayForGyros(correlationBox, slideLeftIndex):
-    return np.argmax(correlationBox) + slideLeftIndex
+def getIntIndexDelayForAccs(coverianceBox, slideLeftIndex):
+    return np.argmax(coverianceBox) + slideLeftIndex
+def getIntIndexDelayForGyros(coverianceBox, slideLeftIndex):
+    return np.argmax(coverianceBox) + slideLeftIndex
 
-def getFloatIndexDelayForGivenCorrelationBox(correlationBox, slideLeftIndex):
-    maxIndex = np.argmax(correlationBox)
+def getFloatIndexDelayForGivenCoverianceBox(coverianceBox, slideLeftIndex):
+    maxIndex = np.argmax(coverianceBox)
     
-    y1 = correlationBox[maxIndex-1]
-    y2 = correlationBox[maxIndex]
-    y3 = correlationBox[maxIndex+1]
+    y1 = coverianceBox[maxIndex-1]
+    y2 = coverianceBox[maxIndex]
+    y3 = coverianceBox[maxIndex+1]
 
     a = (y1 + y3 - 2*y2) / 2
     b = (y2-y1) + a
