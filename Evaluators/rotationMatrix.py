@@ -1,27 +1,27 @@
 from utility import *
-from fetcher import data
+import fetcher as data
 from delay import *
-from correlation import *
+from covariance import *
 
 
 def calculateRotationMatrixFromGyros(dataIndexBias, windowLength): #this functions requires gyro values fetched
 
-    correlationBox,_,_,indexes = createCorrelationBoxForGyros_Mag(data.gyro_d435i, data.gyro_t265, windowLength)
+    covarianceBox,_,_,indexes = createCovarianceBoxForGyros_Mag(data.gyro_d435i, data.gyro_t265, windowLength)
 
     gyro_longer = data.gyro_d435i if data.gyro_d435i.shape[0] > data.gyro_t265.shape[0] else data.gyro_t265
     gyro_shorter = data.gyro_d435i if data.gyro_d435i.shape[0] <= data.gyro_t265.shape[0] else data.gyro_t265
 
-    delay_float_index = getFloatIndexDelayForGivenCorrelationBox(correlationBox, indexes[0]) # delay is added to the longer one, since this delay is calculated keeping shorter one still
+    delay_float_index = getFloatIndexDelayForGivenCovarianceBox(covarianceBox, indexes[0]) # delay is added to the longer one, since this delay is calculated keeping shorter one still
 
     matched_vectors_linearfit = []
 
-    maxRight = gyro_shorter.shape[0] if gyro_shorter.shape[0] < (gyro_longer.shape[0] - delay_float_index) else gyro_longer.shape[0]
+    maxRight = gyro_shorter.shape[0] - int(delay_float_index) if gyro_shorter.shape[0] < (gyro_longer.shape[0] - int(delay_float_index)) else gyro_longer.shape[0] - int(delay_float_index)
 
     A = None
     B = None
 
     first_iteration = True
-    for i in range(dataIndexBias, maxRight):
+    for i in range(dataIndexBias, maxRight - 1):
 
         v1 = gyro_shorter.iloc[i,:]
 
@@ -50,22 +50,22 @@ def calculateRotationMatrixFromGyros(dataIndexBias, windowLength): #this functio
 
 def calculateRotationMatrixFromAccs(dataIndexBias, windowLength): #this functions requires acc values fetched
 
-    correlationBox,_,_,indexes = createCorrelationBoxForAccs_Mag(data.acc_d435i, data.acc_t265, windowLength)
+    correlationBox,_,_,indexes = createCovarianceBoxForAccs_Mag(data.acc_d435i, data.acc_t265, windowLength)
 
     acc_longer = data.acc_d435i if data.acc_d435i.shape[0] > data.acc_t265.shape[0] else data.acc_t265
     acc_shorter = data.acc_d435i if data.acc_d435i.shape[0] <= data.acc_t265.shape[0] else data.acc_t265
 
-    delay_float_index = getFloatIndexDelayForGivenCorrelationBox(correlationBox, indexes[0]) # delay is added to the longer one, since this delay is calculated keeping shorter one still
+    delay_float_index = getFloatIndexDelayForGivenCovarianceBox(correlationBox, indexes[0]) # delay is added to the longer one, since this delay is calculated keeping shorter one still
 
     matched_vectors_linearfit = []
 
-    maxRight = acc_shorter.shape[0] if acc_shorter.shape[0] < (acc_longer.shape[0] - delay_float_index) else acc_longer.shape[0]
+    maxRight = acc_shorter.shape[0] - int(delay_float_index) if acc_shorter.shape[0] < (acc_longer.shape[0] - delay_float_index) else acc_longer.shape[0] - int(delay_float_index)
 
     A = None
     B = None
 
     first_iteration = True
-    for i in range(dataIndexBias, maxRight):
+    for i in range(dataIndexBias, maxRight - 1):
 
         v1 = acc_shorter.iloc[i,:]
 

@@ -7,7 +7,7 @@ import math
 import numpy as np
 
 
-def createCoverianceBoxForAccs_Mag(acc_d435i, acc_t265, windowLength):
+def createCovarianceBoxForAccs_Mag(acc_d435i, acc_t265, windowLength):
 
     #input validity checks
     if(min(acc_d435i.shape[0], acc_t265.shape[0]) <= windowLength):
@@ -42,7 +42,7 @@ def createCoverianceBoxForAccs_Mag(acc_d435i, acc_t265, windowLength):
         magAcc_longer = magAcc_d435i
 
     
-    coverianceBox = []
+    covarianceBox = []
 
     startIndex = int(len(magAcc_shorter) / 2)
 
@@ -60,7 +60,7 @@ def createCoverianceBoxForAccs_Mag(acc_d435i, acc_t265, windowLength):
     return covarianceBox, magAcc_longer, magAcc_shorter, (-maxSlideLeftRange, maxSlideRightRange)
 
 
-def createCoverianceBoxForGyros_Mag(gyro_d435i, gyro_t265, windowLength):
+def createCovarianceBoxForGyros_Mag(gyro_d435i, gyro_t265, windowLength):
 
     #input validity checks
     if(min(gyro_d435i.shape[0], gyro_t265.shape[0]) <= windowLength):

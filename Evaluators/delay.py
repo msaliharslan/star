@@ -6,7 +6,7 @@ def getIntIndexDelayForAccs(coverianceBox, slideLeftIndex):
 def getIntIndexDelayForGyros(coverianceBox, slideLeftIndex):
     return np.argmax(coverianceBox) + slideLeftIndex
 
-def getFloatIndexDelayForGivenCoverianceBox(coverianceBox, slideLeftIndex):
+def getFloatIndexDelayForGivenCovarianceBox(coverianceBox, slideLeftIndex):
     maxIndex = np.argmax(coverianceBox)
     
     y1 = coverianceBox[maxIndex-1]
