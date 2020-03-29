@@ -3,8 +3,9 @@
 *.html
 /Intel*RealSense*D435I
 /Intel*RealSense*T265
-/CMakeFiles
-/build
+/Recorder/build
 /__pycache__
 /.vscode
-/CMakeCache.txt
+/Records/Rosbag
+/Records/Csv
+

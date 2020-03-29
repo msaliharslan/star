@@ -10,7 +10,7 @@ import rosbag, csv
 import os
 import shutil
 
-listOfBagFiles = [f for f in os.listdir(".") if f[-4:] == ".bag"]	#get list of only bag files in current dir.
+listOfBagFiles = [f for f in os.listdir("../") if f[-4:] == ".bag"]	#get list of only bag files in current dir.
 numberOfFiles = str(len(listOfBagFiles))
 
 count = 0
