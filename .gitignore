@@ -4,7 +4,7 @@
 /Intel*RealSense*D435I
 /Intel*RealSense*T265
 /Recorder/build
-/__pycache__
+*__pycache__
 /.vscode
 /Records/Rosbag
 /Records/Csv
