@@ -1,19 +1,24 @@
 from utility import *
-import fetcher as data
+import fetcher
 from delay import *
 from covariance import *
 
 
-def calculateRotationMatrixFromGyros(dataIndexBias, windowLength): #this functions requires gyro values fetched
+matched_vectors_linearfit_acc = None
+matched_vectors_linearfit_gyro = None
 
-    covarianceBox,_,_,indexes = createCovarianceBoxForGyros_Mag(data.gyro_d435i, data.gyro_t265, windowLength)
+def calculateRotationMatrixFromGyros(fetcherIndexBias, windowLength): #this functions requires gyro values fetched
+    
+    global matched_vectors_linearfit_gyro
 
-    gyro_longer = data.gyro_d435i if data.gyro_d435i.shape[0] > data.gyro_t265.shape[0] else data.gyro_t265
-    gyro_shorter = data.gyro_d435i if data.gyro_d435i.shape[0] <= data.gyro_t265.shape[0] else data.gyro_t265
+    covarianceBox,_,_,indexes = createCovarianceBoxForGyros_Mag(fetcher.gyro_d435i, fetcher.gyro_t265, windowLength)
+
+    gyro_longer = fetcher.gyro_d435i if fetcher.gyro_d435i.shape[0] > fetcher.gyro_t265.shape[0] else fetcher.gyro_t265
+    gyro_shorter = fetcher.gyro_d435i if fetcher.gyro_d435i.shape[0] <= fetcher.gyro_t265.shape[0] else fetcher.gyro_t265
 
     delay_float_index = getFloatIndexDelayForGivenCovarianceBox(covarianceBox, indexes[0]) # delay is added to the longer one, since this delay is calculated keeping shorter one still
 
-    matched_vectors_linearfit = []
+    matched_vectors_linearfit_gyro = []
 
     maxRight = gyro_shorter.shape[0] - int(delay_float_index) if gyro_shorter.shape[0] < (gyro_longer.shape[0] - int(delay_float_index)) else gyro_longer.shape[0] - int(delay_float_index)
 
@@ -21,7 +26,7 @@ def calculateRotationMatrixFromGyros(dataIndexBias, windowLength): #this functio
     B = None
 
     first_iteration = True
-    for i in range(dataIndexBias, maxRight - 1):
+    for i in range(fetcherIndexBias, maxRight - 1):
 
         v1 = gyro_shorter.iloc[i,:]
 
@@ -33,7 +38,7 @@ def calculateRotationMatrixFromGyros(dataIndexBias, windowLength): #this functio
 
         v2 = lineFit( [v2_0, v2_1],  delay_float_index - int(delay_float_index))
 
-        matched_vectors_linearfit.append( (v1, v2) )
+        matched_vectors_linearfit_gyro.append( (v1, v2) )
         
         if(first_iteration):
             A = np.stack((v1))
@@ -43,21 +48,23 @@ def calculateRotationMatrixFromGyros(dataIndexBias, windowLength): #this functio
         A = np.vstack((A, v1))
         B = np.vstack((B, v2))        
 
-    R = np.linalg.lstsq(A,B)[0]
+    R = np.linalg.lstsq(A,B,rcond=None)[0]
 
     return R
 
 
-def calculateRotationMatrixFromAccs(dataIndexBias, windowLength): #this functions requires acc values fetched
+def calculateRotationMatrixFromAccs(fetcherIndexBias, windowLength): #this functions requires acc values fetched
+    
+    global matched_vectors_linearfit_acc
 
-    correlationBox,_,_,indexes = createCovarianceBoxForAccs_Mag(data.acc_d435i, data.acc_t265, windowLength)
+    correlationBox,_,_,indexes = createCovarianceBoxForAccs_Mag(fetcher.acc_d435i, fetcher.acc_t265, windowLength)
 
-    acc_longer = data.acc_d435i if data.acc_d435i.shape[0] > data.acc_t265.shape[0] else data.acc_t265
-    acc_shorter = data.acc_d435i if data.acc_d435i.shape[0] <= data.acc_t265.shape[0] else data.acc_t265
+    acc_longer = fetcher.acc_d435i if fetcher.acc_d435i.shape[0] > fetcher.acc_t265.shape[0] else fetcher.acc_t265
+    acc_shorter = fetcher.acc_d435i if fetcher.acc_d435i.shape[0] <= fetcher.acc_t265.shape[0] else fetcher.acc_t265
 
     delay_float_index = getFloatIndexDelayForGivenCovarianceBox(correlationBox, indexes[0]) # delay is added to the longer one, since this delay is calculated keeping shorter one still
 
-    matched_vectors_linearfit = []
+    matched_vectors_linearfit_acc = []
 
     maxRight = acc_shorter.shape[0] - int(delay_float_index) if acc_shorter.shape[0] < (acc_longer.shape[0] - delay_float_index) else acc_longer.shape[0] - int(delay_float_index)
 
@@ -65,7 +72,7 @@ def calculateRotationMatrixFromAccs(dataIndexBias, windowLength): #this function
     B = None
 
     first_iteration = True
-    for i in range(dataIndexBias, maxRight - 1):
+    for i in range(fetcherIndexBias, maxRight - 1):
 
         v1 = acc_shorter.iloc[i,:]
 
@@ -77,7 +84,7 @@ def calculateRotationMatrixFromAccs(dataIndexBias, windowLength): #this function
 
         v2 = lineFit( [v2_0, v2_1],  delay_float_index - int(delay_float_index))
 
-        matched_vectors_linearfit.append( (v1, v2) )
+        matched_vectors_linearfit_acc.append( (v1, v2) )
         
         if(first_iteration):
             A = np.stack((v1))
@@ -87,6 +94,6 @@ def calculateRotationMatrixFromAccs(dataIndexBias, windowLength): #this function
         A = np.vstack((A, v1))
         B = np.vstack((B, v2))        
 
-    R = np.linalg.lstsq(A,B)[0]
+    R = np.linalg.lstsq(A,B, rcond=None)[0]
 
     return R

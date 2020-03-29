@@ -64,7 +64,7 @@ def lineFit ( data, point ):
     return (data[1] - data[0]) * point + data[0]
     
 
-# Calculates the nearest orthogonal matrix to a given 3 x 3 matrix TODO move to tester or maybe is rotation matrix
+# Calculates the nearest orthogonal matrix to a given 3 x 3 matrix
 def orthogonalize (R):
     Y = np.dot(np.transpose(R), R) - np.identity(3)
     Q = R - np.dot( np.dot(R, Y), (0.5*np.identity(3) - 3/8 * Y + 5/16 * np.dot(Y,Y) - 35 / 128 * np.linalg.matrix_power(Y,4)  ) )
