@@ -9,28 +9,36 @@ Created on Thu Feb  6 17:14:44 2020
 import rosbag, csv
 import os
 import shutil
+import argparse
 
-listOfBagFiles = [f for f in os.listdir("../") if f[-4:] == ".bag"]	#get list of only bag files in current dir.
-numberOfFiles = str(len(listOfBagFiles))
+targetRecordsF = open("../Records/targetRecords.txt","r")
+
+fileBagNames = []
+for fileBagName in targetRecordsF:
+	fileBagNames.append(fileBagName[:-1])
+
+print(fileBagNames)
+
+targetRecordsF.close()
+
+#exit()
+
 
 count = 0
-for bagFile in listOfBagFiles:
+for bagFile in fileBagNames:
 	count += 1
-	print ("reading file " + str(count) + " of  " + numberOfFiles + ": " + bagFile)
 	#access bag
-	bag = rosbag.Bag(bagFile)
+	bag = rosbag.Bag("../Records/"+bagFile)
 	bagContents = bag.read_messages()
 	bagName = bag.filename
 
-
 	#create a new directory
-	folder = bagName.rstrip('.bag')
+	folder = "../Records/activeCsv/" + bagName.rstrip('.bag').lstrip("../Records/")
 	try:	#else already exists
 		os.makedirs(folder)
 	except:
 		print ("could not create folder")
 		pass
-	shutil.copyfile(bagName, folder + '/' + bagName)
 
 
 	#get list of topics from the bag
@@ -71,4 +79,5 @@ for bagFile in listOfBagFiles:
 						values.append(pair[1])
 				filewriter.writerow(values)
 	bag.close()
-print ("Done reading all " + numberOfFiles + " bag files.")
+
+print ("Done reading all ")

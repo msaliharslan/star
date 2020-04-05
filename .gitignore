@@ -1,4 +1,5 @@
 *.cmake
+*.csv
 *.bag
 *.html
 /Intel*RealSense*D435I

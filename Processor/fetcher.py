@@ -1,34 +1,40 @@
 import pandas
+import os
+
+
+appendAllDefault = "../Records/activeCsv/"
 
 paths = {
 
     #metadata paths
 
     #t265
-    "path_metadata_acc_t265" : "/Intel RealSense T265/_device_0_sensor_0_Accel_0_imu_metadata.csv",
-    "path_metadata_gyro_t265" : "/Intel RealSense T265/_device_0_sensor_0_Gyro_0_imu_metadata.csv",
-    "path_metadata_fisheye_t265" : "/Intel RealSense T265/_device_0_sensor_0_Fisheye_1_image_metadata.csv",
+    "path_metadata_acc_t265" : "/_device_0_sensor_0_Accel_0_imu_metadata.csv",
+    "path_metadata_gyro_t265" : "/_device_0_sensor_0_Gyro_0_imu_metadata.csv",
+    "path_metadata_fisheye_t265" : "/_device_0_sensor_0_Fisheye_1_image_metadata.csv",
     
     #d435i
-    "path_metadata_acc_d435i" : "/Intel RealSense D435I/_device_0_sensor_2_Accel_0_imu_metadata.csv",
-    "path_metadata_gyro_d435i" : "/Intel RealSense D435I/_device_0_sensor_2_Gyro_0_imu_metadata.csv",
-    "path_metadata_depth_d435i" : "/Intel RealSense D435I/_device_0_sensor_0_Depth_0_image_metadata.csv",
+    "path_metadata_acc_d435i" : "/_device_0_sensor_2_Accel_0_imu_metadata.csv",
+    "path_metadata_gyro_d435i" : "/_device_0_sensor_2_Gyro_0_imu_metadata.csv",
+    "path_metadata_depth_d435i" : "/_device_0_sensor_0_Depth_0_image_metadata.csv",
 
     #data paths
 
     #t265
-    "path_data_acc_t265" : "/Intel RealSense T265/_device_0_sensor_0_Accel_0_imu_data.csv",
-    "path_data_gyro_t265": "/Intel RealSense T265/_device_0_sensor_0_Gyro_0_imu_data.csv",
+    "path_data_acc_t265" : "/_device_0_sensor_0_Accel_0_imu_data.csv",
+    "path_data_gyro_t265": "/_device_0_sensor_0_Gyro_0_imu_data.csv",
+    "path_data_fisheye1_t265" : "/_device_0_sensor_0_Fisheye_1_image_data.csv",
+    "path_data_fisheye2_t265" : "/_device_0_sensor_0_Fisheye_2_image_data.csv",
 
     #d435i
-    "path_data_acc_d435i" : "/Intel RealSense D435I/_device_0_sensor_2_Accel_0_imu_data.csv",
-    "path_data_gyro_d435i" : "/Intel RealSense D435I/_device_0_sensor_2_Gyro_0_imu_data.csv",
+    "path_data_acc_d435i" : "/_device_0_sensor_2_Accel_0_imu_data.csv",
+    "path_data_gyro_d435i" : "/_device_0_sensor_2_Gyro_0_imu_data.csv",
 
 }
 
 def insertFocusDataPath( focusDir ):
     for key in paths.keys():
-        paths[key] = focusDir + paths[key]
+        paths[key] = appendAllDefault + focusDir + paths[key]
 
 #fetched data
 #d435i
@@ -37,13 +43,15 @@ gyro_d435i = None
 metadata_acc_d435i = None
 metadata_gyro_d435i = None
 metadata_depth_d435i = None
+depth_d435i = None
 #t265
 acc_t265 = None
 gyro_t265 = None
 metadata_acc_t265 = None
 metadata_gyro_t265 = None
 metadata_fisheye_t265 = None
-
+fisheye1_t265 = None
+fisheye2_t265 = None
 #metadata fetching
 
 def fetchAccAndGyroMetadataForD435i():
@@ -102,7 +110,10 @@ def fetchAccAndGyroDataT265():
     gyro_t265 = pandas.read_csv(paths["path_data_gyro_t265"]).iloc[:,14:17]
 
 def fetchFisheyeDataT265(): #not implemented yet
-    return None 
+    global fisheye1_t265
+    global fisheye2_t265
+    fisheye1_t265 = pandas.read_csv(paths["path_data_fisheye1_t265"]).iloc[:,12]
+    fisheye2_t265 = pandas.read_csv(paths["path_data_fisheye2_t265"]).iloc[:,12]
 
 def fetchAllDataT265(): #not complete since fetchFisheyeDataT265 is not complete
     fetchAccAndGyroDataT265()
