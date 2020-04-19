@@ -29,6 +29,7 @@ paths = {
     #d435i
     "path_data_acc_d435i" : "/_device_0_sensor_2_Accel_0_imu_data.csv",
     "path_data_gyro_d435i" : "/_device_0_sensor_2_Gyro_0_imu_data.csv",
+    "path_data_depth_d435i" : "/_device_0_sensor_0_Depth_0_image_data.csv"
 
 }
 
@@ -96,7 +97,8 @@ def fetchAccAndGyroDataD435i():
     gyro_d435i = pandas.read_csv(paths["path_data_gyro_d435i"]).iloc[:,14:17]
 
 def fetchDepthDataD435i(): #not implemented yet
-    return None
+    global depth_d435i
+    depth_d435i = pandas.read_csv(paths["path_data_depth_d435i"]).iloc[:,12]
 
 def fetchAllDataD435i(): #not complete since fetchDepthData435i is not complete
     fetchAccAndGyroDataD435i()
