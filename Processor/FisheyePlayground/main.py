@@ -13,80 +13,218 @@ import fetcher
 fetcher.insertFocusDataPath("hessBoardFisheye")
 fetcher.fetchFisheyeDataT265()
 
-targetFrameIndex = 10
+targetFrameIndex = 100
 
 fisheyeWidth = 800
 fisheyeHeight = 848
 
+#targetFrameIndexes = [125,150,320]
 
-data = np.array((fetcher.fisheye1_t265[targetFrameIndex][1:-1]).split(", "),dtype=np.uint8)
-data = data.reshape((fisheyeWidth,fisheyeHeight))
+targetFrameIndexes = [250]
+
+
+fisheye1Frames = []
+fisheye2Frames = []
+
+for targetIndex in targetFrameIndexes:
+    
+    data1 = np.array((fetcher.fisheye1_t265[targetIndex][1:-1]).split(", "),dtype=np.uint8)
+    data1 = data1.reshape((fisheyeWidth,fisheyeHeight))
+    
+    data2 = np.array((fetcher.fisheye2_t265[targetIndex][1:-1]).split(", "),dtype=np.uint8)
+    data2 = data2.reshape((fisheyeWidth,fisheyeHeight))    
+    
+    fisheye1Frames.append(data1)
+    fisheye2Frames.append(data2)
 
 
 K1 = np.array([[284.501708984375, 0.0, 430.9294128417969], [0.0, 285.4164123535156, 394.66510009765625], [0.0, 0.0, 1.0]])
-K2 = np.array([284.1828918457031, 0.0, 427.9779052734375, 0.0, 285.0440979003906, 399.5506896972656, 0.0, 0.0, 1.0])
-K2 = K2.reshape((3,3))
 D1 = np.array([-0.00012164260260760784, 0.03437558934092522, -0.03252582997083664, 0.004925379063934088])
-D2 = np.array([0.0009760634857229888, 0.030147459357976913, -0.02769969031214714, 0.0031066760420799255])
+
+KguessFisheye1 = np.copy(K1)
+DguessFisheye1 = np.copy(D1)
+
+KguessFisheye2 = np.copy(K1)
+DguessFisheye2 = np.copy(D1)
 
 
-undistorted = cv2.fisheye.undistortImage(data, K=K1, D=D1, Knew=K1, new_size=(int(fisheyeWidth), int(fisheyeWidth)))
-
-cv2.imshow("another title", data)
-cv2.imshow("another title", img)
-
-cv2.imshow("randomTitle",undistorted)
-
-plt.imshow( undistorted, cmap='gray')
-# plt.imshow( data.reshape((fisheyeWidth_a, fisheyeHeight_a)))
-
-
-
-# m1type = cv2.CV_32FC1
-# (lm1, lm2) = cv2.fisheye.initUndistortRectifyMap(K1, D1, np.eye(3), np.eye(3), (300,300), m1type)
-
-# godPls =cv2.remap(src = data ,map1 = lm1,map2 = lm2,interpolation = cv2.INTER_LINEAR)
-
-# plt.imshow(godPls)
-
-img = cv2.cvtColor(undistorted,cv2.COLOR_GRAY2BGR)
-
-
-
-gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-
-gray = np.float32(gray)
-dst = cv2.cornerHarris(gray,2,3,0.04)
-
-#result is dilated for marking the corners, not important
-dst = cv2.dilate(dst,None)
-
-# Threshold for an optimal value, it may vary depending on the image.
-img[dst>0.01*dst.max()]=[0,0,255]
-
-
-
-
-
-
-
-
-
-edges = cv2.Canny(undistorted,50,150,apertureSize = 3)
-
-lines = cv2.HoughLines(edges,1,np.pi/180,200)
-for line in lines:
-    for rho,theta in line:
-        a = np.cos(theta)
-        b = np.sin(theta)
-        x0 = a*rho
-        y0 = b*rho
-        x1 = int(x0 + 1000*(-b))
-        y1 = int(y0 + 1000*(a))
-        x2 = int(x0 - 1000*(-b))
-        y2 = int(y0 - 1000*(a))
+def undistortFisheyeImages(fisheyeImages, K, D):
     
-        cv2.line(img,(x1,y1),(x2,y2),(0,0,255),2)
+    undistortedImages = []
+    
+    for image in fisheyeImages:
+    
+        undistorted = cv2.fisheye.undistortImage(image, K=K, D=D, Knew=K, new_size=(int(fisheyeHeight), int(fisheyeWidth)))
+        undistortedImages.append(undistorted)
+
+    return undistortedImages
+
+
+def showImages(images):
+    
+    for i,image in enumerate(images):
+        
+        cv2.imshow("image index: " + str(i), image)
+
+
+
+
+
+def drawLineOnImages(images):
+    
+    newImages = []
+    
+    for image in images:
+                
+        edges = cv2.Canny(image,50,150,apertureSize = 3)
+        
+        lines = cv2.HoughLines(edges,1,np.pi/180,200)
+        for line in lines:
+            for rho,theta in line:
+                a = np.cos(theta)
+                b = np.sin(theta)
+                x0 = a*rho
+                y0 = b*rho
+                x1 = int(x0 + 1000*(-b))
+                y1 = int(y0 + 1000*(a))
+                x2 = int(x0 - 1000*(-b))
+                y2 = int(y0 - 1000*(a))
+            
+                cv2.line(image,(x1,y1),(x2,y2),(255,255,255),2)
+        
+        newImages.append(image)
+    
+    return newImages
+
+def drawChessboardCornersForImages(images_):
+    
+    images = np.copy(images_)
+    
+    newImages = []
+    
+    CHECKERBOARD = (8,6) 
+    
+    for image in images:
+        
+        ret, corners = cv2.findChessboardCorners(image, CHECKERBOARD, cv2.CALIB_CB_ADAPTIVE_THRESH+cv2.CALIB_CB_FAST_CHECK+cv2.CALIB_CB_NORMALIZE_IMAGE)
+       
+        if(ret == True):
+            
+            for corner in corners:
+                
+                cv2.circle(image, (int(corner[0][0]),int(corner[0][1])), 4,  (255,255,255), thickness=-1,)        
+        
+        newImages.append(image)
+                    
+    return newImages
+        
+
+
+def findFisheyeCalibrationsFromFrames(frames, Kinitial):
+    
+        # Checkboard dimensions
+    CHECKERBOARD = (8,6)
+    subpix_criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.1)
+    calibration_flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC  + cv2.fisheye.CALIB_FIX_SKEW + cv2.fisheye.CALIB_USE_INTRINSIC_GUESS
+    objp = np.zeros((1, CHECKERBOARD[0]*CHECKERBOARD[1], 3), np.float32)
+    objp[0,:,:2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2)
+    
+    
+    objpoints = [] # 3d point in real world space
+    imgpoints = [] # 2d points in image plane.
+    
+    for frame in frames:
+        
+    
+        ret, corners = cv2.findChessboardCorners(frame, CHECKERBOARD, cv2.CALIB_CB_ADAPTIVE_THRESH+cv2.CALIB_CB_FAST_CHECK+cv2.CALIB_CB_NORMALIZE_IMAGE)
+        
+        # If found, add object points, image points (after refining them)
+        if ret == True:
+            objpoints.append(objp)
+            cv2.cornerSubPix(frame,corners,(3,3),(-1,-1),subpix_criteria)
+            imgpoints.append(corners)
+    ###
+    
+    # calculate K & D
+    N_imm = len(objpoints)
+    K = np.copy(Kinitial)
+    D = np.zeros((4, 1))
+    rvecs = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(N_imm)]
+    tvecs = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(N_imm)]
+    retval, K, D, rvecs, tvecs = cv2.fisheye.calibrate(
+        objpoints,
+        imgpoints,
+        frame.shape[::-1],
+        K,
+        D,
+        rvecs,
+        tvecs,
+        calibration_flags,
+        (cv2.TERM_CRITERIA_EPS+cv2.TERM_CRITERIA_MAX_ITER, 30, 1e-7))
+
+
+    return (K,D)
+        
+#main
+
+showImages(fisheye1Frames + fisheye2Frames)
+showImages(fisheye2Frames)
+
+###############
+
+corneredImages1 = drawChessboardCornersForImages(fisheye1Frames)
+corneredImages2 = drawChessboardCornersForImages(fisheye2Frames)
+
+showImages(corneredImages1)
+showImages(corneredImages2)
+
+##############
+
+undistortedImages1 = undistortFisheyeImages(fisheye1Frames, K1, D1)
+undistortedImages2 = undistortFisheyeImages(fisheye2Frames, K1, D1)
+        
+showImages(undistortedImages1)
+showImages(undistortedImages2)
+
+##############
+
+
+KguessFisheye1, DguessFisheye1 = findFisheyeCalibrationsFromFrames(fisheye1Frames, KguessFisheye1)
+KguessFisheye2, DguessFisheye2 = findFisheyeCalibrationsFromFrames(fisheye2Frames, KguessFisheye2)
+
+undistortedImages1Guess = undistortFisheyeImages(fisheye1Frames, KguessFisheye1, DguessFisheye1)
+undistortedImages2Guess = undistortFisheyeImages(fisheye2Frames, KguessFisheye2, DguessFisheye2)
+
+showImages(undistortedImages1Guess)
+showImages(undistortedImages2Guess)
+
+
+##############
+
+showImages(undistortedImages1 + undistortedImages1Guess)
+showImages(undistortedImages2 + undistortedImages2Guess)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
