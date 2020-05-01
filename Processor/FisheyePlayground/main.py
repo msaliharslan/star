@@ -18,9 +18,9 @@ targetFrameIndex = 100
 fisheyeWidth = 800
 fisheyeHeight = 848
 
-#targetFrameIndexes = [125,150,320]
+targetFrameIndexes = [125,150,275]
 
-targetFrameIndexes = [250]
+#targetFrameIndexes = [250]
 
 
 fisheye1Frames = []
@@ -52,9 +52,13 @@ def undistortFisheyeImages(fisheyeImages, K, D):
     
     undistortedImages = []
     
+    nk = K.copy()
+    nk[0,0]=K[0,0]/2
+    nk[1,1]=K[1,1]/2   
+    
     for image in fisheyeImages:
     
-        undistorted = cv2.fisheye.undistortImage(image, K=K, D=D, Knew=K, new_size=(int(fisheyeHeight), int(fisheyeWidth)))
+        undistorted = cv2.fisheye.undistortImage(image, K=K, D=D, Knew=nk, new_size=(int(fisheyeHeight), int(fisheyeWidth)))
         undistortedImages.append(undistorted)
 
     return undistortedImages
@@ -164,6 +168,21 @@ def findFisheyeCalibrationsFromFrames(frames, Kinitial):
 
 
     return (K,D)
+
+
+def undistortImageCorners(K, D, corners):
+
+    #inputVectors = np.array([ [1,1], [w,1] , [w,h], [1,h] ]).astype(np.float32)
+    
+    undistortedVectors = cv2.undistortPoints(corners, K, D)
+    
+    return undistortedVectors
+
+
+def findDistBetweenPoints(point1, point2):
+    
+    return np.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
+    
         
 #main
 
@@ -186,6 +205,8 @@ undistortedImages2 = undistortFisheyeImages(fisheye2Frames, K1, D1)
 showImages(undistortedImages1)
 showImages(undistortedImages2)
 
+showImages([undistortedImages1[0]] + [fisheye1Frames[0]])
+
 ##############
 
 
@@ -195,8 +216,10 @@ KguessFisheye2, DguessFisheye2 = findFisheyeCalibrationsFromFrames(fisheye2Frame
 undistortedImages1Guess = undistortFisheyeImages(fisheye1Frames, KguessFisheye1, DguessFisheye1)
 undistortedImages2Guess = undistortFisheyeImages(fisheye2Frames, KguessFisheye2, DguessFisheye2)
 
-showImages(undistortedImages1Guess)
-showImages(undistortedImages2Guess)
+showImages([undistortedImages1Guess[0]])
+showImages([undistortedImages2Guess[0]])
+
+showImages([undistortedImages1[0]] + [undistortedImages1Guess[0]] + [undistortedImages2Guess[0]])
 
 
 ##############
@@ -204,20 +227,35 @@ showImages(undistortedImages2Guess)
 showImages(undistortedImages1 + undistortedImages1Guess)
 showImages(undistortedImages2 + undistortedImages2Guess)
 
+##############
+
+outputVectorsIntel = undistortImageCorners(K1, D1, fisheye2Frames[0])
+
+outputVectorsGuess1 = undistortImageCorners(KguessFisheye1, DguessFisheye1, fisheye1Frames[0])
+outputVectorsGuess2 = undistortImageCorners(KguessFisheye2, DguessFisheye2, fisheye2Frames[0])
+
+outputVectorGuessMean = undistortImageCorners((KguessFisheye1 + KguessFisheye2)/2, (DguessFisheye1+DguessFisheye2)/2, fisheye1Frames[0])
+
+##############
+
+# try to validate undistorImageCorners
+
+randomPixelsFisheye = np.array([[307,277], [670, 254], [403, 647]]).astype(np.float32)
+randomPixelsUndistorted = np.array([[360,328], [608, 290], [412, 567]]).astype(np.float32)
 
 
+distUndistortFirst = findDistBetweenPoints(randomPixelsUndistorted[0], randomPixelsUndistorted[1])
+distUndistortSecond = findDistBetweenPoints(randomPixelsUndistorted[1], randomPixelsUndistorted[2])
+
+ratioUndistorted = distUndistortFirst / distUndistortSecond
 
 
+undistortedCorners = undistortImageCorners(K1, D1, randomPixelsFisheye)
 
+distCornerFirst = findDistBetweenPoints(undistortedCorners[0][0], undistortedCorners[1][0])
+distCornerSecond = findDistBetweenPoints(undistortedCorners[1][0], undistortedCorners[2][0])
 
-
-
-
-
-
-
-
-
+ratioCorners = distCornerFirst / distCornerSecond
 
 
 
