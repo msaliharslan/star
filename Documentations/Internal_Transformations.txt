@@ -1,0 +1,13 @@
+######################################
+############ D435i ###################
+######################################
+
+Rotation between infrared imagers is identity
+Translation from right infrared imager to left infrared imager is [-0.049962237477303, 0, 0] : [x, y, z]
+Rotation from RGB imager to left infrared imager is [-0.003309185151011, -0.000677197298501, -0.006368848029524, -0.999974012374878] : [x, y, z, w]
+Translation from RGB imager to left infrared imager is [0.014851336367428, 0.0004623454588, 0.000593442469835] : [x, y, z]
+Transformation from IMU to left imager(?) is done internally by D435i.
+
+######################################
+############# T265 ###################
+######################################
