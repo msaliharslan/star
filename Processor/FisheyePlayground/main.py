@@ -18,7 +18,8 @@ targetFrameIndex = 100
 fisheyeWidth = 800
 fisheyeHeight = 848
 
-targetFrameIndexes = [125,150,275]
+np.random.seed(4)
+targetFrameIndexes = np.random.choice(np.arange(1,500),1)
 
 #targetFrameIndexes = [250]
 
@@ -54,9 +55,13 @@ def undistortFisheyeImages(fisheyeImages, K, D):
     
     nk = K.copy()
     nk[0,0]=K[0,0]/2
-    nk[1,1]=K[1,1]/2   
+    nk[1,1]=K[1,1]/2
+#    nk[0,0]=K[0,0]
+#    nk[1,1]=K[1,1]     
     
     for image in fisheyeImages:
+        
+        print(image.shape)
     
         undistorted = cv2.fisheye.undistortImage(image, K=K, D=D, Knew=nk, new_size=(int(fisheyeHeight), int(fisheyeWidth)))
         undistortedImages.append(undistorted)
@@ -124,7 +129,10 @@ def drawChessboardCornersForImages(images_):
         
 
 
-def findFisheyeCalibrationsFromFrames(frames, Kinitial):
+def findFisheyeCalibrationsFromFrames(frames, Kinitial = None):
+    
+    if(Kinitial is None):
+        Kinitial = np.eye(3)
     
         # Checkboard dimensions
     CHECKERBOARD = (8,6)
@@ -171,18 +179,28 @@ def findFisheyeCalibrationsFromFrames(frames, Kinitial):
 
 
 def undistortImageCorners(K, D, corners):
-
-    #inputVectors = np.array([ [1,1], [w,1] , [w,h], [1,h] ]).astype(np.float32)
     
-    undistortedVectors = cv2.undistortPoints(corners, K, D)
+    nk = K.copy()
+    nk[0,0]=K[0,0]/2
+    nk[1,1]=K[1,1]/2
+
+    
+    undistortedVectors = cv2.fisheye.undistortPoints(corners, K, D, P=nk)
     
     return undistortedVectors
+
+
+def distortImageCorners(K, D, corners):
+    
+    distortedVectors = cv2.fisheye.distortPoints(corners, K, D)
+    
+    return distortedVectors
 
 
 def findDistBetweenPoints(point1, point2):
     
     return np.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
-    
+
         
 #main
 
@@ -210,8 +228,8 @@ showImages([undistortedImages1[0]] + [fisheye1Frames[0]])
 ##############
 
 
-KguessFisheye1, DguessFisheye1 = findFisheyeCalibrationsFromFrames(fisheye1Frames, KguessFisheye1)
-KguessFisheye2, DguessFisheye2 = findFisheyeCalibrationsFromFrames(fisheye2Frames, KguessFisheye2)
+KguessFisheye1, DguessFisheye1 = findFisheyeCalibrationsFromFrames(fisheye1Frames)
+KguessFisheye2, DguessFisheye2 = findFisheyeCalibrationsFromFrames(fisheye2Frames)
 
 undistortedImages1Guess = undistortFisheyeImages(fisheye1Frames, KguessFisheye1, DguessFisheye1)
 undistortedImages2Guess = undistortFisheyeImages(fisheye2Frames, KguessFisheye2, DguessFisheye2)
@@ -258,14 +276,47 @@ distCornerSecond = findDistBetweenPoints(undistortedCorners[1][0], undistortedCo
 ratioCorners = distCornerFirst / distCornerSecond
 
 
+###############
+w = fisheye1Frames[0].shape[1]
+h = fisheye1Frames[0].shape[0]
+
+corners = np.array([[0,0], [w,0], [w,h], [0,h], [138, 131]]).astype(np.float32)
+corners = np.float32(corners[:, np.newaxis, :])
+sides = np.array([[0,int(h/2)], [int(w/2), 0], [w,int(h/2)], [int(w/2), h]]).astype(np.float32)
+
+pixelCorners_intel = undistortImageCorners(K1, D1, corners)
+pixelCorners_fisheye1 = undistortImageCorners(KguessFisheye1, DguessFisheye1, corners)
+pixelSides_intel = undistortImageCorners(K1, D1, sides)
+pixelSides_fisheye1 = undistortImageCorners(KguessFisheye1, DguessFisheye1, sides)
+
+#############
+
+
+circularMap = [(138,131), (119,146), (258,36), (341,8), (519,5), (670, 73), (777, 195), (825, 327), (821, 493), (725, 667), (597, 757), (365, 787), (173, 700), (70,559), (30,375)]
+circularMap = np.array(circularMap).astype(np.float32)
+circularMap = np.float32(circularMap[:, np.newaxis, :])
+
+rectangularMap = np.linspace((0,0), (w,0), 100)
+rectangularMap = np.concatenate( (rectangularMap, np.linspace((w,0), (w,h), 100)) )
+rectangularMap = np.concatenate( (rectangularMap, np.linspace((w,h), (0,h), 100)) )
+rectangularMap = np.concatenate( (rectangularMap, np.linspace((0,h), (0,0), 100)) )
+rectangularMap = np.array([rectangularMap]).astype(np.float32)
+#rectangularMap = np.float32(rectangularMap[:, np.newaxis, :])
+
+mappedRectangular = mappedRectangular[0]
+
+mappedRectangular = undistortImageCorners(K1, D1, rectangularMap)
+
+mappedCircular = undistortImageCorners(K1, D1, circularMap)
+
+
+plt.scatter(mappedRectangular[:,0], mappedRectangular[:,1])
+plt.scatter(mappedCircular[:,0,0], mappedCircular[:,0,1])
+
+plt.scatter(rectangularMap[:,0], rectangularMap[:,1])
+plt.scatter(circularMap[:,0], circularMap[:,1])
 
 
 
 
-
-
-
-
-
-
-
+plt.figure()
