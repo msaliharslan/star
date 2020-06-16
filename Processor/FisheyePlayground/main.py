@@ -19,7 +19,7 @@ fisheyeWidth = 800
 fisheyeHeight = 848
 
 np.random.seed(4)
-targetFrameIndexes = np.random.choice(np.arange(1,500),1)
+targetFrameIndexes = np.random.choice(np.arange(1,500),150)
 
 #targetFrameIndexes = [250]
 
@@ -137,7 +137,7 @@ def findFisheyeCalibrationsFromFrames(frames, Kinitial = None):
         # Checkboard dimensions
     CHECKERBOARD = (8,6)
     subpix_criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.1)
-    calibration_flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC  + cv2.fisheye.CALIB_FIX_SKEW + cv2.fisheye.CALIB_USE_INTRINSIC_GUESS
+    calibration_flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC  + cv2.fisheye.CALIB_FIX_SKEW
     objp = np.zeros((1, CHECKERBOARD[0]*CHECKERBOARD[1], 3), np.float32)
     objp[0,:,:2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2)
     
@@ -185,7 +185,7 @@ def undistortImageCorners(K, D, corners):
     nk[1,1]=K[1,1]/2
 
     
-    undistortedVectors = cv2.fisheye.undistortPoints(corners, K, D, P=nk)
+    undistortedVectors = cv2.undistortPoints(corners, K, D, P=nk)
     
     return undistortedVectors
 
@@ -223,6 +223,8 @@ undistortedImages2 = undistortFisheyeImages(fisheye2Frames, K1, D1)
 showImages(undistortedImages1)
 showImages(undistortedImages2)
 
+showImages([undistortedImages1[0]] + [undistortedImages2[0]])
+
 showImages([undistortedImages1[0]] + [fisheye1Frames[0]])
 
 ##############
@@ -235,7 +237,7 @@ undistortedImages1Guess = undistortFisheyeImages(fisheye1Frames, KguessFisheye1,
 undistortedImages2Guess = undistortFisheyeImages(fisheye2Frames, KguessFisheye2, DguessFisheye2)
 
 showImages([undistortedImages1Guess[0]])
-showImages([undistortedImages2Guess[0]])
+showImages([undistortedImages2Guess[1]])
 
 showImages([undistortedImages1[0]] + [undistortedImages1Guess[0]] + [undistortedImages2Guess[0]])
 
@@ -303,20 +305,134 @@ rectangularMap = np.concatenate( (rectangularMap, np.linspace((0,h), (0,0), 100)
 rectangularMap = np.array([rectangularMap]).astype(np.float32)
 #rectangularMap = np.float32(rectangularMap[:, np.newaxis, :])
 
-mappedRectangular = mappedRectangular[0]
-
-mappedRectangular = undistortImageCorners(K1, D1, rectangularMap)
-
-mappedCircular = undistortImageCorners(K1, D1, circularMap)
 
 
-plt.scatter(mappedRectangular[:,0], mappedRectangular[:,1])
-plt.scatter(mappedCircular[:,0,0], mappedCircular[:,0,1])
+mappedRectangular_intel = undistortImageCorners(K1, D1, rectangularMap)
+mappedRectangular_intel = mappedRectangular_intel[:,0,:]
 
-plt.scatter(rectangularMap[:,0], rectangularMap[:,1])
-plt.scatter(circularMap[:,0], circularMap[:,1])
+mappedRectangular_guess = undistortImageCorners(KguessFisheye2, DguessFisheye2, rectangularMap)
+mappedRectangular_guess = mappedRectangular_guess[:,0,:]
 
 
 
+mappedCircular_intel = undistortImageCorners(K1, D1, circularMap)
+mappedCircular_intel = mappedCircular_intel[:,0,:]
+
+mappedCircular_guess = undistortImageCorners(KguessFisheye2, DguessFisheye2, circularMap)
+mappedCircular_guess = mappedCircular_guess[:,0,:]
 
 plt.figure()
+plt.scatter(mappedRectangular_intel[:,0], mappedRectangular_intel[:,1])
+plt.scatter(mappedRectangular_guess[:,0], mappedRectangular_guess[:,1])
+
+plt.figure()
+plt.scatter(mappedCircular_intel[:,0], mappedCircular_intel[:,1])
+plt.scatter(mappedCircular_guess[:,0], mappedCircular_guess[:,1])
+
+
+plt.scatter(rectangularMap[0,:,0], rectangularMap[0,:,1])
+plt.scatter(circularMap[:,0,0], circularMap[:,0,1])
+
+############ After a long time passed through final hell
+# Exploration Area
+
+# Objectives : 1 - For the first step we will use Intel intrinsic parameters to achive an inverse function completion
+# between cv2.fisheye.distort and cv2.fisheye.undistort points
+
+# intel k : K1
+# intel d : D1
+
+# Initiate
+
+# we will use rectangular test points
+w = 50
+h = 50
+originX = -w/2
+originY = -h/2
+
+rectangularMap = np.linspace((originX,originY), (originX + w, originY), 100)
+rectangularMap = np.concatenate( (rectangularMap, np.linspace((originX + w, originY), (originX+ w, originY + h), 100)) )
+rectangularMap = np.concatenate( (rectangularMap, np.linspace((originX + w, originY + h), (originX, originY + h), 100)) )
+rectangularMap = np.concatenate( (rectangularMap, np.linspace((originX, originY + h), (originX, originY), 100)) )
+rectangularMap = np.array([rectangularMap]).astype(np.float32)
+
+plt.scatter(rectangularMap[0,:,0], rectangularMap[0,:,1])
+
+#distorting points
+distorted	 = cv2.fisheye.distortPoints(rectangularMap, K1, D1)
+
+plt.scatter(distorted[0,:,0], distorted[0,:,1])
+
+#undistorting points
+
+undistorted = cv2.fisheye.undistortPoints(distorted, K1, D1)
+
+plt.scatter(2*undistorted[0,:,0], 2*undistorted[0,:,1])
+
+# This objective is completed
+
+# Objectives : 2 - We will now compare our calcualated distortion parameters and Intel's given parameters
+
+# we will use rectangular and circular points as test points
+
+#rectangular test points 
+
+w = 800 * 3/4
+h = 848 * 3/4
+cx = 430.92941284
+cy = 394.6651001
+originX = cx - w/2
+originY = cy - h/2
+
+rectangularMap2 = np.linspace((originX,originY), (originX + w, originY), 100)
+rectangularMap2 = np.concatenate( (rectangularMap2, np.linspace((originX + w, originY), (originX+ w, originY + h), 100)) )
+rectangularMap2 = np.concatenate( (rectangularMap2, np.linspace((originX + w, originY + h), (originX, originY + h), 100)) )
+rectangularMap2 = np.concatenate( (rectangularMap2, np.linspace((originX, originY + h), (originX, originY), 100)) )
+rectangularMap2 = np.array([rectangularMap2]).astype(np.float32)
+
+plt.scatter(rectangularMap2[0,:,0], rectangularMap2[0,:,1])
+
+#undistorting points
+
+undistortedRectIntel = cv2.fisheye.undistortPoints(rectangularMap2, K1, D1)
+undistortedRectGuess1 = cv2.fisheye.undistortPoints(rectangularMap2, KguessFisheye1, DguessFisheye1)
+
+plt.scatter(undistortedRectIntel[0,:,0], undistortedRectIntel[0,:,1])
+plt.scatter(undistortedRectGuess1[0,:,0], undistortedRectGuess1[0,:,1])
+
+#circular test points
+
+circularMap = [(138,131), (119,146), (258,36), (341,8), (519,5), (670, 73), (777, 195), (825, 327), (821, 493), (725, 667), (597, 757), (365, 787), (173, 700), (70,559), (30,375)]
+circularMap = np.array(circularMap).astype(np.float32)
+scale = 0.8
+circularMap [:,0] = (circularMap[:,0] - cx) * scale + cx
+circularMap [:,1] = (circularMap[:,1] - cy) * scale + cy
+
+circularMap = np.float32(circularMap[:, np.newaxis, :]) 
+
+plt.scatter(circularMap[:,0,0], circularMap[:,0,1])
+
+undistortedCircIntel = cv2.fisheye.undistortPoints(circularMap, K1, D1)
+plt.scatter(undistortedCircIntel[:,0,0], undistortedCircIntel[:,0,1])
+
+undistortedCircIntel_ = undistortedCircIntel[:,0,:]
+undistortedCircIntel_[:,0] = undistortedCircIntel_[:,0] * K1[0,0] + K1[0,2]
+undistortedCircIntel_[:,1] = undistortedCircIntel_[:,1] * K1[1,1] + K1[1,2]
+
+
+undistortedCircGuess1 = cv2.fisheye.undistortPoints(circularMap, KguessFisheye1, DguessFisheye1)
+plt.scatter(undistortedCircGuess1[:,0,0], undistortedCircGuess1[:,0,1])
+
+undistortedCircGuess1_ = undistortedCircGuess1[:,0,:]
+undistortedCircGuess1_[:,0] = undistortedCircGuess1_[:,0] * KguessFisheye1[0,0] + KguessFisheye1[0,2]
+undistortedCircGuess1_[:,1] = undistortedCircGuess1_[:,1] * KguessFisheye1[1,1] + KguessFisheye1[1,2]
+
+
+plt.scatter(undistortedCircIntel_[:,0], undistortedCircIntel_[:,1])
+plt.scatter(undistortedCircGuess1_[:,0], undistortedCircGuess1_[:,1])
+
+#undistoring points
+
+
+
+
