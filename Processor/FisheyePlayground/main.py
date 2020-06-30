@@ -21,6 +21,8 @@ fisheyeHeight = 848
 np.random.seed(45)
 targetFrameIndexes = np.random.choice(np.arange(1,500),1)
 
+Mat image_deneme = cv2.imread("../../fisheyeSnapshots/left_0degree_1_Fisheye.png",cv2.IMREAD_UNCHANGED)
+
 #targetFrameIndexes = [250]
 
 
