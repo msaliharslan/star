@@ -6,8 +6,21 @@ Rotation between infrared imagers is identity
 Translation from right infrared imager to left infrared imager is [-0.049962237477303, 0, 0] : [x, y, z]
 Rotation from RGB imager to left infrared imager is [-0.003309185151011, -0.000677197298501, -0.006368848029524, -0.999974012374878] : [x, y, z, w]
 Translation from RGB imager to left infrared imager is [0.014851336367428, 0.0004623454588, 0.000593442469835] : [x, y, z]
-Transformation from IMU to left imager(?) is done internally by D435i.
+Transformation from IMU to left imager is done internally by D435i.
 
 ######################################
 ############# T265 ###################
 ######################################
+
+Translation from fisheye 1 to pose is [0.031929191201925, 0.000113989575766, -3.38033132720739E-05] : [x, y, z]
+Rotation from fisheye 1 to pose is [0.99998950958252, 0.003296238137409, -0.00291465758346, 0.001287228194997] : [x, y, z, w]
+Translation from fisheye 2 to pose is [-0.031929302960634, 7.47319791116752E-05, -4.20763171860017E-05] : [x, y, z]
+Rotation from fisheye 2 to pose is [0.999997079372406, 0.000338271434885, -0.001731238677166, 0.001662679249421] : [x, y, z, w]
+Translation from IMU to pose is [-0.021229315549135, 2.60376800724771E-05, 9.00632439879701E-05] : [x, y, z]
+Rotation from IMU to pose is [0, 1, 0, 0]  : [x, y, z, w]
+Distortion parameters of fisheye 1 are [-0.00012164260260760784, 0.03437558934092522, -0.03252582997083664, 0.004925379063934088, 0.0]
+Kamera matrix of fisheye 1 is [284.501708984375, 0.0, 430.9294128417969, 0.0, 285.4164123535156, 394.66510009765625, 0.0, 0.0, 1.0]
+Distortion parameters of fisheye 2 are [0.0009760634857229888, 0.030147459357976913, -0.02769969031214714, 0.0031066760420799255, 0.0]
+Kamera matrix of fisheye 2 is [284.1828918457031, 0.0, 427.9779052734375, 0.0, 285.0440979003906, 399.5506896972656, 0.0, 0.0, 1.0]
+
+
