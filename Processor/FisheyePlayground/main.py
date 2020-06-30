@@ -18,8 +18,8 @@ targetFrameIndex = 100
 fisheyeWidth = 800
 fisheyeHeight = 848
 
-np.random.seed(4)
-targetFrameIndexes = np.random.choice(np.arange(1,500),150)
+np.random.seed(45)
+targetFrameIndexes = np.random.choice(np.arange(1,500),1)
 
 #targetFrameIndexes = [250]
 
@@ -42,11 +42,14 @@ for targetIndex in targetFrameIndexes:
 K1 = np.array([[284.501708984375, 0.0, 430.9294128417969], [0.0, 285.4164123535156, 394.66510009765625], [0.0, 0.0, 1.0]])
 D1 = np.array([-0.00012164260260760784, 0.03437558934092522, -0.03252582997083664, 0.004925379063934088])
 
+K2 = np.array([[284.1828918457031, 0.0, 427.9779052734375], [0.0, 285.0440979003906, 399.5506896972656], [0.0, 0.0, 1.0]])
+D2 = np.array([0.0009760634857229888, 0.030147459357976913, -0.02769969031214714, 0.0031066760420799255])
+
 KguessFisheye1 = np.copy(K1)
 DguessFisheye1 = np.copy(D1)
 
-KguessFisheye2 = np.copy(K1)
-DguessFisheye2 = np.copy(D1)
+KguessFisheye2 = np.copy(K2)
+DguessFisheye2 = np.copy(D2)
 
 
 def undistortFisheyeImages(fisheyeImages, K, D):
@@ -54,8 +57,7 @@ def undistortFisheyeImages(fisheyeImages, K, D):
     undistortedImages = []
     
     nk = K.copy()
-    nk[0,0]=K[0,0]/2
-    nk[1,1]=K[1,1]/2
+
 #    nk[0,0]=K[0,0]
 #    nk[1,1]=K[1,1]     
     
@@ -126,6 +128,8 @@ def drawChessboardCornersForImages(images_):
         newImages.append(image)
                     
     return newImages
+
+
         
 
 
@@ -201,10 +205,23 @@ def findDistBetweenPoints(point1, point2):
     
     return np.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
 
+
+def drawPointsOnImage(image_, points):
+    
+    image = np.copy(image_)
+    
+    for point in points:
+        
+        cv2.circle(image, (int(point[0][0]),int(point[0][1])), 4,  (255,255,255), thickness=-1,)        
+                 
+    return image
+
         
 #main
 
-showImages(fisheye1Frames + fisheye2Frames)
+showImages(fisheye1Frames[:2] + fisheye2Frames[:2])
+
+showImages(fisheye1Frames)
 showImages(fisheye2Frames)
 
 ###############
@@ -218,7 +235,7 @@ showImages(corneredImages2)
 ##############
 
 undistortedImages1 = undistortFisheyeImages(fisheye1Frames, K1, D1)
-undistortedImages2 = undistortFisheyeImages(fisheye2Frames, K1, D1)
+undistortedImages2 = undistortFisheyeImages(fisheye2Frames, K2, D2)
         
 showImages(undistortedImages1)
 showImages(undistortedImages2)
@@ -233,8 +250,8 @@ showImages([undistortedImages1[0]] + [fisheye1Frames[0]])
 KguessFisheye1, DguessFisheye1 = findFisheyeCalibrationsFromFrames(fisheye1Frames)
 KguessFisheye2, DguessFisheye2 = findFisheyeCalibrationsFromFrames(fisheye2Frames)
 
-undistortedImages1Guess = undistortFisheyeImages(fisheye1Frames, KguessFisheye1, DguessFisheye1)
-undistortedImages2Guess = undistortFisheyeImages(fisheye2Frames, KguessFisheye2, DguessFisheye2)
+undistortedImages1Guess = undistortFisheyeImages(fisheye1Frames[:2], KguessFisheye1, DguessFisheye1)
+undistortedImages2Guess = undistortFisheyeImages(fisheye2Frames[:2], KguessFisheye2, DguessFisheye2)
 
 showImages([undistortedImages1Guess[0]])
 showImages([undistortedImages2Guess[1]])
@@ -404,9 +421,10 @@ plt.scatter(undistortedRectGuess1[0,:,0], undistortedRectGuess1[0,:,1])
 
 circularMap = [(138,131), (119,146), (258,36), (341,8), (519,5), (670, 73), (777, 195), (825, 327), (821, 493), (725, 667), (597, 757), (365, 787), (173, 700), (70,559), (30,375)]
 circularMap = np.array(circularMap).astype(np.float32)
-scale = 0.8
+scale = 1
 circularMap [:,0] = (circularMap[:,0] - cx) * scale + cx
 circularMap [:,1] = (circularMap[:,1] - cy) * scale + cy
+
 
 circularMap = np.float32(circularMap[:, np.newaxis, :]) 
 
@@ -431,7 +449,64 @@ undistortedCircGuess1_[:,1] = undistortedCircGuess1_[:,1] * KguessFisheye1[1,1] 
 plt.scatter(undistortedCircIntel_[:,0], undistortedCircIntel_[:,1])
 plt.scatter(undistortedCircGuess1_[:,0], undistortedCircGuess1_[:,1])
 
-#undistoring points
+#plot undistorted points on fisheye image
+cv2.imshow("imageWithPoints", drawPointsOnImage(fisheye1Frames[0], circularMap))
+
+#calculate l2 distance between undistortedIntel and undistortedGuess1
+squareSum = np.sqrt(np.sum((undistortedCircIntel_ - undistortedCircGuess1_)**2, axis=1))
+maxDistance = np.max(squareSum)
+
+
+
+
+##########################################################################
+
+#checkpoint 
+
+##########################################################################
+
+#we will now try to match between two points of fisheye1 and fisheye2
+
+x1 = np.array([[[511,204]]]).astype(np.float32)
+x2 = np.array([[[237, 209]]]).astype(np.float32)
+
+#  run the Transformations_fisheye.py code here to obtain transformation matrixes
+x2_predict = np.dot(K2 ,np.dot(R2_inv, np.dot(R1, np.dot(np.linalg.inv(K1), x1) ) + T1 - T2))
+
+
+undistortedX1 = cv2.fisheye.undistortPoints(x1, K1, D1)
+undistortedX2 = cv2.fisheye.undistortPoints(x2, K2, D2)
+
+undistortedX1_ = np.append(undistortedX1[0][0], np.array([1]))
+undistortedX2_ = np.append(undistortedX2[0][0], np.array([1]))
+
+undistortedX2_predict =  np.dot(R2_inv, np.dot(R1,  undistortedX1_ ) + T1 - T2)
+print(undistortedX2_predict)
+print(undistortedX2_)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
