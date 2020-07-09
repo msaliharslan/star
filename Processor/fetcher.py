@@ -2,7 +2,7 @@ import pandas
 import os
 
 
-appendAllDefault = "../Records/activeCsv/"
+appendAllDefault = "Records/activeCsv/"
 
 paths = {
 
