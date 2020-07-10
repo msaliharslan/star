@@ -282,14 +282,14 @@ def garbage_main():
     ##############
     
     
-    KguessFisheye1, DguessFisheye1 = findFisheyeCalibrationsFromFrames(fisheye1Frames)
-    KguessFisheye2, DguessFisheye2 = findFisheyeCalibrationsFromFrames(fisheye2Frames)
+    KguessFisheye1, DguessFisheye1 = findFisheyeCalibrationsFromFrames(fisheye1Frames, K1)
+    KguessFisheye2, DguessFisheye2 = findFisheyeCalibrationsFromFrames(fisheye2Frames, K2)
     
     undistortedImages1Guess = undistortFisheyeImages(fisheye1Frames[:2], KguessFisheye1, DguessFisheye1)
     undistortedImages2Guess = undistortFisheyeImages(fisheye2Frames[:2], KguessFisheye2, DguessFisheye2)
     
     showImages([undistortedImages1Guess[0]])
-    showImages([undistortedImages2Guess[1]])
+    showImages([undistortedImages2Guess[0]])
     
     showImages([undistortedImages1[0]] + [undistortedImages1Guess[0]] + [undistortedImages2Guess[0]])
     
