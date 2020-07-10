@@ -4,14 +4,15 @@ import os
 import numpy as np
 import cv2
 
-#os.chdir("..")
-#sys.path.append(os.getcwd())
+os.chdir("..")
+sys.path.append(os.getcwd())
 
 import matplotlib.pyplot as plt
 import fetcher
+import FisheyePlayground.Pick_frames_from_extracted_data as PFED
 
 
-readFromCsv = False
+readMode = 2
 
 fisheyeWidth = 800
 fisheyeHeight = 848
@@ -20,7 +21,7 @@ fisheye1Frames = []
 fisheye2Frames = []
 
 
-if(readFromCsv):
+if(readMode == 0): #read from chessBoardFisheye
 
     fetcher.insertFocusDataPath("hessBoardFisheye")
     fetcher.fetchFisheyeDataT265()
@@ -47,12 +48,9 @@ if(readFromCsv):
         fisheye1Frames.append(data1)
         fisheye2Frames.append(data2)
         
-        
-else:
+elif(readMode == 1): #read from images
 
           
-    
-    
     for filename in os.listdir("../../fisheyeSnapshots/leftEye"):
         img = cv2.imread(os.path.join("../../fisheyeSnapshots/leftEye",filename), cv2.IMREAD_UNCHANGED)
         if img is not None:
@@ -64,11 +62,11 @@ else:
         if img is not None:
             fisheye2Frames.append(img)
     
-    
-    
-    
-    
+elif(readMode == 2):
 
+    (fisheye1Frames, fisheye2Frames) = PFED.pickFramesFromExtractedData(numSamples=20) 
+    
+    
 
 K1 = np.array([[284.501708984375, 0.0, 430.9294128417969], [0.0, 285.4164123535156, 394.66510009765625], [0.0, 0.0, 1.0]])
 D1 = np.array([-0.00012164260260760784, 0.03437558934092522, -0.03252582997083664, 0.004925379063934088])
@@ -89,13 +87,11 @@ def undistortFisheyeImages(fisheyeImages, K, D):
     
     nk = K.copy()
 
-#    nk[0,0]=K[0,0]
-#    nk[1,1]=K[1,1]     
+#    nk[0,0]=K[0,0]/2
+#    nk[1,1]=K[1,1]/2   
     
     for image in fisheyeImages:
-        
-        print(image.shape)
-    
+            
         undistorted = cv2.fisheye.undistortImage(image, K=K, D=D, Knew=nk, new_size=(int(fisheyeHeight), int(fisheyeWidth)))
         undistortedImages.append(undistorted)
 
@@ -144,7 +140,7 @@ def drawChessboardCornersForImages(images_):
     
     newImages = []
     
-    CHECKERBOARD = (6,9) 
+    CHECKERBOARD = (6,10) 
     
     for image in images:
         
@@ -164,13 +160,13 @@ def drawChessboardCornersForImages(images_):
         
 
 
-def findFisheyeCalibrationsFromFrames(frames, Kinitial = None):
+def findFisheyeCalibrationsFromFrames(frames, Kinitial = None, calibrationName = None):
     
     if(Kinitial is None):
         Kinitial = np.eye(3)
     
         # Checkboard dimensions
-    CHECKERBOARD = (6,9)
+    CHECKERBOARD = (6,10)
     subpix_criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.1)
     calibration_flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC  + cv2.fisheye.CALIB_FIX_SKEW
     objp = np.zeros((1, CHECKERBOARD[0]*CHECKERBOARD[1], 3), np.float32)
@@ -183,7 +179,7 @@ def findFisheyeCalibrationsFromFrames(frames, Kinitial = None):
     for frame in frames:
         
     
-        ret, corners = cv2.findChessboardCorners(image, CHECKERBOARD, cv2.CALIB_CB_ADAPTIVE_THRESH+cv2.CALIB_CB_FAST_CHECK+cv2.CALIB_CB_NORMALIZE_IMAGE)
+        ret, corners = cv2.findChessboardCorners(frame, CHECKERBOARD, cv2.CALIB_CB_ADAPTIVE_THRESH+cv2.CALIB_CB_FAST_CHECK+cv2.CALIB_CB_NORMALIZE_IMAGE)
         
         # If found, add object points, image points (after refining them)
         if(ret == True):
@@ -210,6 +206,17 @@ def findFisheyeCalibrationsFromFrames(frames, Kinitial = None):
         tvecs,
         calibration_flags,
         (cv2.TERM_CRITERIA_EPS+cv2.TERM_CRITERIA_MAX_ITER, 30, 1e-7))
+    
+    if(calibrationName):
+        
+        calibrationFile = open("./calibrationFile.txt", "a")
+        
+        calibrationFile.write("\n ********************** \n" + calibrationName + " : \n")
+        calibrationFile.write("K : \n" + str(K) + "\n")
+        calibrationFile.write("D : \n" + str(D))
+        calibrationFile.write("\n ###################### \n" )
+
+        calibrationFile.close()
 
 
     return (K,D)
@@ -256,12 +263,12 @@ def garbage_main():
 
     showImages(fisheye1Frames[:2] + fisheye2Frames[:2])
     
-    showImages(fisheye1Frames)
+    showImages(fisheye1Frames[8:10])
     showImages(fisheye2Frames)
     
     ###############
     
-    corneredImages1 = drawChessboardCornersForImages(fisheye1Frames)
+    corneredImages1 = drawChessboardCornersForImages(fisheye1Frames[15:18])
     corneredImages2 = drawChessboardCornersForImages(fisheye2Frames)
     
     showImages(corneredImages1)
@@ -282,11 +289,13 @@ def garbage_main():
     ##############
     
     
-    KguessFisheye1, DguessFisheye1 = findFisheyeCalibrationsFromFrames(fisheye1Frames, K1)
+    KguessFisheye1, DguessFisheye1 = findFisheyeCalibrationsFromFrames(fisheye1Frames, K1, "test3")
     KguessFisheye2, DguessFisheye2 = findFisheyeCalibrationsFromFrames(fisheye2Frames, K2)
     
-    undistortedImages1Guess = undistortFisheyeImages(fisheye1Frames[:2], KguessFisheye1, DguessFisheye1)
-    undistortedImages2Guess = undistortFisheyeImages(fisheye2Frames[:2], KguessFisheye2, DguessFisheye2)
+    
+    
+    undistortedImages1Guess = undistortFisheyeImages(fisheye1Frames, KguessFisheye1, DguessFisheye1)
+    undistortedImages2Guess = undistortFisheyeImages(fisheye2Frames, KguessFisheye2, DguessFisheye2)
     
     showImages([undistortedImages1Guess[0]])
     showImages([undistortedImages2Guess[0]])
@@ -296,8 +305,12 @@ def garbage_main():
     
     ##############
     
-    showImages(undistortedImages1 + undistortedImages1Guess)
-    showImages(undistortedImages2 + undistortedImages2Guess)
+    showImages([undistortedImages1[100]] + [undistortedImages1Guess[100]])
+    
+    showImages([undistortedImages1[100]] + [undistortedImages2[100]])
+    
+    
+    showImages(undistortedImages2[:2] + undistortedImages2Guess[:2])
     
     ##############
     
@@ -463,10 +476,9 @@ def garbage_main():
     
     circularMap = np.float32(circularMap[:, np.newaxis, :]) 
     
-    plt.scatter(circularMap[:,0,0], circularMap[:,0,1])
+    
     
     undistortedCircIntel = cv2.fisheye.undistortPoints(circularMap, K1, D1)
-    plt.scatter(undistortedCircIntel[:,0,0], undistortedCircIntel[:,0,1])
     
     undistortedCircIntel_ = undistortedCircIntel[:,0,:]
     undistortedCircIntel_[:,0] = undistortedCircIntel_[:,0] * K1[0,0] + K1[0,2]
@@ -474,7 +486,6 @@ def garbage_main():
     
     
     undistortedCircGuess1 = cv2.fisheye.undistortPoints(circularMap, KguessFisheye1, DguessFisheye1)
-    plt.scatter(undistortedCircGuess1[:,0,0], undistortedCircGuess1[:,0,1])
     
     undistortedCircGuess1_ = undistortedCircGuess1[:,0,:]
     undistortedCircGuess1_[:,0] = undistortedCircGuess1_[:,0] * KguessFisheye1[0,0] + KguessFisheye1[0,2]

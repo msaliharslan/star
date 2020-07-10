@@ -4,7 +4,7 @@ import os
 
 appendAllDefault = "Records/activeCsv/"
 
-paths = {
+pathsDefault = {
 
     #metadata paths
 
@@ -33,7 +33,11 @@ paths = {
 
 }
 
+paths = None
+
 def insertFocusDataPath( focusDir ):
+    global paths
+    paths = pathsDefault.copy()
     for key in paths.keys():
         paths[key] = appendAllDefault + focusDir + paths[key]
 

@@ -11,7 +11,9 @@ import os
 import shutil
 import argparse
 
-targetRecordsF = open("../Records/targetRecords.txt","r")
+os.chdir("../")
+
+targetRecordsF = open("Records/targetRecords.txt","r")
 
 fileBagNames = []
 for fileBagName in targetRecordsF:
@@ -28,7 +30,7 @@ count = 0
 for bagFile in fileBagNames:
 	count += 1
 	#access bag
-	bag = rosbag.Bag("../Records/"+bagFile)
+	bag = rosbag.Bag(bagFile)
 	bagContents = bag.read_messages()
 	bagName = bag.filename
 
@@ -81,3 +83,19 @@ for bagFile in fileBagNames:
 	bag.close()
 
 print ("Done reading all ")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
