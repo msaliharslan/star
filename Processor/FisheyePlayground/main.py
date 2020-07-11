@@ -12,7 +12,7 @@ import fetcher
 import FisheyePlayground.Pick_frames_from_extracted_data as PFED
 
 
-readMode = 2
+readMode = 1
 
 fisheyeWidth = 800
 fisheyeHeight = 848
@@ -51,14 +51,14 @@ if(readMode == 0): #read from chessBoardFisheye
 elif(readMode == 1): #read from images
 
           
-    for filename in os.listdir("../../fisheyeSnapshots/leftEye"):
-        img = cv2.imread(os.path.join("../../fisheyeSnapshots/leftEye",filename), cv2.IMREAD_UNCHANGED)
+    for filename in os.listdir("/home/salih/Documents/fishEyeSalvation/fishEyeLeftSalvation"):
+        img = cv2.imread(os.path.join("/home/salih/Documents/fishEyeSalvation/fishEyeLeftSalvation",filename), cv2.IMREAD_UNCHANGED)
         if img is not None:
             fisheye1Frames.append(img)
     
     
-    for filename in os.listdir("../../fisheyeSnapshots/rightEye"):
-        img = cv2.imread(os.path.join("../../fisheyeSnapshots/rightEye",filename), cv2.IMREAD_UNCHANGED)
+    for filename in os.listdir("/home/salih/Documents/fishEyeSalvation/fishEyeRightSalvation"):
+        img = cv2.imread(os.path.join("/home/salih/Documents/fishEyeSalvation/fishEyeRightSalvation",filename), cv2.IMREAD_UNCHANGED)
         if img is not None:
             fisheye2Frames.append(img)
     
@@ -140,17 +140,17 @@ def drawChessboardCornersForImages(images_):
     
     newImages = []
     
-    CHECKERBOARD = (6,10) 
+    CHECKERBOARD = (8,8) 
     
     for image in images:
         
         ret, corners = cv2.findChessboardCorners(image, CHECKERBOARD, cv2.CALIB_CB_ADAPTIVE_THRESH+cv2.CALIB_CB_FAST_CHECK+cv2.CALIB_CB_NORMALIZE_IMAGE)
        
-        if(ret == True):
+        if(ret):
                         
             for corner in corners:
                 
-                cv2.circle(image, (int(corner[0][0]),int(corner[0][1])), 2,  (255,255,255), thickness=-1,)        
+                cv2.circle(image, (int(corner[0][0]),int(corner[0][1])), 4,  (255,255,255), thickness=-1,)        
         
             newImages.append(image)
                     
@@ -166,7 +166,7 @@ def findFisheyeCalibrationsFromFrames(frames, Kinitial = None, calibrationName =
         Kinitial = np.eye(3)
     
         # Checkboard dimensions
-    CHECKERBOARD = (6,10)
+    CHECKERBOARD = (8,8)
     subpix_criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.1)
     calibration_flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC  + cv2.fisheye.CALIB_FIX_SKEW
     objp = np.zeros((1, CHECKERBOARD[0]*CHECKERBOARD[1], 3), np.float32)
@@ -289,8 +289,8 @@ def garbage_main():
     ##############
     
     
-    KguessFisheye1, DguessFisheye1 = findFisheyeCalibrationsFromFrames(fisheye1Frames, K1, "test3")
-    KguessFisheye2, DguessFisheye2 = findFisheyeCalibrationsFromFrames(fisheye2Frames, K2)
+    KguessFisheye1, DguessFisheye1 = findFisheyeCalibrationsFromFrames(fisheye1Frames, K1, "newImages2TrialLeft")
+    KguessFisheye2, DguessFisheye2 = findFisheyeCalibrationsFromFrames(fisheye2Frames, K2, "newImages2TrialRight")
     
     
     
@@ -305,9 +305,9 @@ def garbage_main():
     
     ##############
     
-    showImages([undistortedImages1[100]] + [undistortedImages1Guess[100]])
+    showImages([undistortedImages1[10]] + [undistortedImages1Guess[10]])
     
-    showImages([undistortedImages1[100]] + [undistortedImages2[100]])
+    showImages([undistortedImages1[10]] + [undistortedImages2[10]])
     
     
     showImages(undistortedImages2[:2] + undistortedImages2Guess[:2])
