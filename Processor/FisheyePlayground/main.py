@@ -51,14 +51,14 @@ if(readMode == 0): #read from chessBoardFisheye
 elif(readMode == 1): #read from images
 
           
-    for filename in os.listdir("/home/salih/Documents/fishEyeSalvation/fishEyeLeftSalvation"):
-        img = cv2.imread(os.path.join("/home/salih/Documents/fishEyeSalvation/fishEyeLeftSalvation",filename), cv2.IMREAD_UNCHANGED)
+    for filename in os.listdir("fisheyeSnapshots/qualityShots/leftEye"):
+        img = cv2.imread(os.path.join("fisheyeSnapshots/qualityShots/leftEye",filename), cv2.IMREAD_UNCHANGED)
         if img is not None:
             fisheye1Frames.append(img)
     
     
-    for filename in os.listdir("/home/salih/Documents/fishEyeSalvation/fishEyeRightSalvation"):
-        img = cv2.imread(os.path.join("/home/salih/Documents/fishEyeSalvation/fishEyeRightSalvation",filename), cv2.IMREAD_UNCHANGED)
+    for filename in os.listdir("fisheyeSnapshots/qualityShots/rightEye"):
+        img = cv2.imread(os.path.join("fisheyeSnapshots/qualityShots/rightEye",filename), cv2.IMREAD_UNCHANGED)
         if img is not None:
             fisheye2Frames.append(img)
     
