@@ -68,7 +68,7 @@ def assignRotationMatrixGyro():
     global R_gyro
     R_gyro = rotationMatrix.calculateRotationMatrixFromGyros(400, 300)
 
-def assignRotationMatrixeBoth():
+def assignRotationMatrixBoth():
     """
     Assign calculation of rotation matrixes to variables
 

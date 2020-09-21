@@ -513,8 +513,8 @@ def garbage_main():
     
     #we will now try to match between two points of fisheye1 and fisheye2
     
-    x1 = np.array([[[511,204]]]).astype(np.float32)
-    x2 = np.array([[[237, 209]]]).astype(np.float32)
+    x1 = np.array([511, 204, 1]).astype(np.float32)
+    x2 = np.array([237, 209, 1]).astype(np.float32)
     
     #  run the Transformations_fisheye.py code here to obtain transformation matrixes
     x2_predict = np.dot(K2 ,np.dot(R2_inv, np.dot(R1, np.dot(np.linalg.inv(K1), x1) ) + T1 - T2))

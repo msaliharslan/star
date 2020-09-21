@@ -1,0 +1,2 @@
+1) The Euclideantransformation is equal to a pure rotation byθabout this point with no translation. (p62)
+2) Letcbe a non-singular twisted cubic.  Thencis notcontained within any plane ofIP3; it intersects a general plane at three distinct points. Atwisted cubic has 12 degrees of freedom (counted as 15 for the matrixA, less 3 for a 1Dprojectivity on the parametrizationθ, which leaves the curve unaltered). Requiring thecurve to pass through a pointXplaces two constraints onc, sinceX=A(1,θ,θ2,θ3)Tis three independent ratios, but only two constraints onceθis eliminated. (p76)

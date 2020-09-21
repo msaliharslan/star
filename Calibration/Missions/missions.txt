@@ -1,0 +1,8 @@
+
+Mission 1)
+    Find rotation and transformation matrices between two fisheye cameras from known 3D object(chessboard).
+    Find rotation and transformation matrices between two fisheye cameras from given intel matrices.
+    Compare the two.
+
+Mission 2)
+    TBD

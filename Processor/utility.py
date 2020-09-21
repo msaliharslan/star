@@ -32,9 +32,7 @@ def isRotationMatrix(R) :
     shouldBeIdentity = np.dot(Rt, R)
     I = np.identity(3, dtype = R.dtype)
     n = np.linalg.norm(I - shouldBeIdentity)
-    print(n)
     return n < 1e-6
- 
  
 # Calculates rotation matrix to euler angles
 # The result is the same as MATLAB except the order
