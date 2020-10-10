@@ -64,7 +64,7 @@ int main(int argc, char **argv) try {
     cfg1.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
     cfg1.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F);
     cfg1.enable_stream(RS2_STREAM_DEPTH);
-    cfg1.enable_record_to_file(string(devices[0].get_info(RS2_CAMERA_INFO_NAME)) + ".bag");
+    // cfg1.enable_record_to_file(string(devices[0].get_info(RS2_CAMERA_INFO_NAME)) + ".bag");
 
     cfg2.enable_device(devices[1].get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
     cfg2.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
@@ -72,7 +72,7 @@ int main(int argc, char **argv) try {
     // cfg2.enable_stream(RS2_STREAM_POSE);
     cfg2.enable_stream(RS2_STREAM_FISHEYE, 1);
     cfg2.enable_stream(RS2_STREAM_FISHEYE, 2);
-    cfg2.enable_record_to_file(string(devices[1].get_info(RS2_CAMERA_INFO_NAME)) + ".bag");
+    // cfg2.enable_record_to_file(string(devices[1].get_info(RS2_CAMERA_INFO_NAME)) + ".bag");
 
     cout << "after config" << endl; 
     double ts1, ts2;

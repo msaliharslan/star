@@ -1,0 +1,3 @@
+/home/tuttyfrutyee/Documents/star/Recorder/application/CMakeFiles/rebuild_cache.dir
+/home/tuttyfrutyee/Documents/star/Recorder/application/CMakeFiles/record.dir
+/home/tuttyfrutyee/Documents/star/Recorder/application/CMakeFiles/edit_cache.dir
