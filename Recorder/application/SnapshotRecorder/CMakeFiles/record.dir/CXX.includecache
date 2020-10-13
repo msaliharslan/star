@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-/home/tuttyfrutyee/Documents/star/Recorder/application/main4.cpp
+/home/tuttyfrutyee/Documents/star/Recorder/application/SnapshotRecorder/main4.cpp
 librealsense2/rs.hpp
 -
 opencv2/opencv.hpp
@@ -24,6 +24,8 @@ fstream
 experimental/filesystem
 -
 time.h
+-
+chrono
 -
 
 /usr/local/include/opencv4/opencv2/calib3d.hpp
