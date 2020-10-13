@@ -154,11 +154,7 @@ int main(int argc, char **argv) try {
     ofstream t265_pose;
     t265_pose.open((filesPath + "/t265_pose.bin").c_str(), ios::out | ios::binary);    
 
-
-
-     
-   
-    rs2::config cfg1;
+    rs2::config cfg1, cfg2;
     rs2::device dev;
     rs2::colorizer color_map;
     rs2::context ctx;
@@ -167,6 +163,8 @@ int main(int argc, char **argv) try {
 
     // Obtain a list of devices currently present on the system
 
+    bool D435Connected = false;
+    bool T265Connected = false;
     auto devices = ctx.query_devices();
     size_t device_count = devices.size();
     if (!device_count){
@@ -176,135 +174,229 @@ int main(int argc, char **argv) try {
 
   
     for (int i = 0; i < device_count; i++){
-        cout << i + 1 << "\t" << devices[i].get_info(RS2_CAMERA_INFO_NAME) << endl;
+        string deviceName = devices[i].get_info(RS2_CAMERA_INFO_NAME);
+        cout << i + 1 << "\t" << deviceName << endl;
+        size_t found = deviceName.find("D435");
+        if(found <= deviceName.length()) {
+            D435Connected = true;
+            cfg1.enable_device(devices[i].get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
+            cfg1.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
+            cfg1.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F);
+            cfg1.enable_stream(RS2_STREAM_DEPTH);
+            cfg1.enable_stream(RS2_STREAM_COLOR);
+        }
+        else {
+            T265Connected = true;
+            cfg1.enable_device(devices[i].get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
+            cfg1.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
+            cfg1.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F);
+            cfg1.enable_stream(RS2_STREAM_POSE);
+            cfg1.enable_stream(RS2_STREAM_FISHEYE, 1);
+            cfg1.enable_stream(RS2_STREAM_FISHEYE, 2);
+        }
     }
 
 
-    cfg1.enable_device(devices[0].get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
-    cfg1.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
-    cfg1.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F);
-    cfg1.enable_stream(RS2_STREAM_POSE);
-    cfg1.enable_stream(RS2_STREAM_FISHEYE, 1);
-    cfg1.enable_stream(RS2_STREAM_FISHEYE, 2);
 
 
-
-
-    //T265
 
     pipeline pipe1(ctx);
+    pipeline pipe2(ctx);
 
     int shotCounter = 1;
 
-    pipe1.start(cfg1, [&](rs2::frame frame)
-    {
+    //T265
 
-        auto currentTime = chrono::high_resolution_clock::now();
-        auto passedTime = chrono::duration_cast<chrono::milliseconds>( currentTime - startTime ).count(); // in milliseconds
+    if(T265Connected) {
 
-        if( passedTime > warmUpTime * 1000 && shotCounter <= numShots){
+        pipe1.start(cfg1, [&](rs2::frame frame)
+        {
 
-            if(passedTime / (deltaT * 1000) > shotCounter){
-                cout << "shot taken" << endl;
-                shotCounter ++;
+            auto currentTime = chrono::high_resolution_clock::now();
+            auto passedTime = chrono::duration_cast<chrono::milliseconds>( currentTime - startTime ).count(); // in milliseconds
+
+            if( passedTime > warmUpTime * 1000 && shotCounter <= numShots){
+
+                if(passedTime / (deltaT * 1000) > shotCounter){
+                    cout << "shot taken" << endl;
+                    shotCounter ++;
+                }
+
+                // Cast the frame to appropriate object type
+                auto fset = frame.as<rs2::frameset>();
+                auto motion = frame.as<rs2::motion_frame>();
+                auto fisheye1 = fset.get_fisheye_frame(1);
+                auto fisheye2 = fset.get_fisheye_frame(2);
+                auto pose = frame.as<rs2::pose_frame>();
+                
+
+                // If casting succeeded and the arrived frame is from gyro stream
+                if (motion && motion.get_profile().stream_type() == RS2_STREAM_GYRO && motion.get_profile().format() == RS2_FORMAT_MOTION_XYZ32F)
+                {
+                    // Get the timestamp of the current frame
+                    // ts2 = motion.get_timestamp();
+                    // Get gyro measures
+                    rs2_vector gyro_data = motion.get_motion_data();
+
+                    double timeStamp = motion.get_timestamp();
+                    t265_gyro.write((const char*)(&timeStamp), sizeof(double));            
+
+                    writeVectorToFileBinary(t265_gyro, gyro_data);
+
+                }
+
+                // If casting succeeded and the arrived frame is from accelerometer stream
+                if (motion && motion.get_profile().stream_type() == RS2_STREAM_ACCEL && motion.get_profile().format() == RS2_FORMAT_MOTION_XYZ32F)
+                {
+
+                    // Get accelerometer measures
+                    rs2_vector accel_data = motion.get_motion_data();
+
+                    double timeStamp = motion.get_timestamp();
+                    t265_acc.write((const char*)(&timeStamp), sizeof(double));            
+
+                    writeVectorToFileBinary(t265_acc, accel_data);
+
+                }
+
+                if (fisheye1)
+                {
+                    double timeStamp = fisheye1.get_timestamp();
+                    auto frameNumber = fisheye1.get_frame_number();
+                    stringstream filename;
+
+                    cv::Mat img0(cv::Size(848, 800), CV_8U, (void*)fisheye1.get_data(), cv::Mat::AUTO_STEP);
+                    filename << "../../Records/" << saveFolderName.str() << "/leftFisheye/left_" << frameNumber << "_" << std::setprecision(13) << timeStamp << ".png";            
+                    cv::imwrite(filename.str() , img0);
+
+                }
+
+                if(fisheye2){ 
+
+                    double timeStamp = fisheye2.get_timestamp();
+                    auto frameNumber = fisheye2.get_frame_number();
+                    stringstream filename;
+
+                    cv::Mat img0(cv::Size(848, 800), CV_8U, (void*)fisheye2.get_data(), cv::Mat::AUTO_STEP);
+                    filename << "../../Records/" << saveFolderName.str() << "/rightFisheye/right_" << frameNumber << "_" << std::setprecision(13) << timeStamp << ".png";            
+                    cv::imwrite(filename.str() , img0);              
+                }
+
+                if(pose){
+
+                    auto poseData = pose.get_pose_data();
+
+                    double timeStamp = pose.get_timestamp();
+                    t265_pose.write((const char*)(&timeStamp), sizeof(double));
+
+                    writeVectorToFileBinary(t265_pose, poseData.translation);
+                    writeVectorToFileBinary(t265_pose, poseData.velocity);
+                    writeVectorToFileBinary(t265_pose, poseData.acceleration);
+                    writeQuaternionToFileBinary(t265_pose, poseData.rotation);
+                    writeVectorToFileBinary(t265_pose, poseData.angular_velocity);
+                    writeVectorToFileBinary(t265_pose, poseData.angular_acceleration);
+
+                    t265_pose.write((const char*)(&poseData.tracker_confidence), sizeof(unsigned int));
+                    t265_pose.write((const char*)(&poseData.mapper_confidence), sizeof(unsigned int));
+
+
+                }
             }
 
-            // Cast the frame that arrived to motion frame
-            auto fset = frame.as<rs2::frameset>();
-            auto motion = frame.as<rs2::motion_frame>();
-            auto fisheye1 = frame.as<rs2::frameset>().get_fisheye_frame(1);
-            auto fisheye2 = frame.as<rs2::frameset>().get_fisheye_frame(2);
-            auto pose = frame.as<rs2::pose_frame>();
-            
-
-            // If casting succeeded and the arrived frame is from gyro stream
-            if (motion && motion.get_profile().stream_type() == RS2_STREAM_GYRO && motion.get_profile().format() == RS2_FORMAT_MOTION_XYZ32F)
-            {
-                // Get the timestamp of the current frame
-                // ts2 = motion.get_timestamp();
-                // Get gyro measures
-                rs2_vector gyro_data = motion.get_motion_data();
-
-                double timeStamp = motion.get_timestamp();
-                t265_gyro.write((const char*)(&timeStamp), sizeof(double));            
-
-                writeVectorToFileBinary(t265_gyro, gyro_data);
-
-
-
-
-            }
-            // If casting succeeded and the arrived frame is from accelerometer stream
-            if (motion && motion.get_profile().stream_type() == RS2_STREAM_ACCEL && motion.get_profile().format() == RS2_FORMAT_MOTION_XYZ32F)
-            {
-
-                // Get accelerometer measures
-                rs2_vector accel_data = motion.get_motion_data();
-
-                double timeStamp = motion.get_timestamp();
-                t265_acc.write((const char*)(&timeStamp), sizeof(double));            
-
-                writeVectorToFileBinary(t265_acc, accel_data);
-
+            if(shotCounter > numShots){
+                continueRecord = false;
             }
 
-            if (fisheye1)
-            {
-                double timeStamp = fisheye1.get_timestamp();
-                auto frameNumber = fisheye1.get_frame_number();
-                stringstream filename;
+        });
+    }
 
-                cv::Mat img0(cv::Size(848, 800), CV_8U, (void*)fisheye1.get_data(), cv::Mat::AUTO_STEP);
-                filename << "../../Records/" << saveFolderName.str() << "/leftFisheye/left_" << frameNumber << "_" << std::setprecision(13) << timeStamp << ".png";            
-                cv::imwrite(filename.str() , img0);
+    if(D435Connected) {
+        
+        pipe2.start(cfg2, [&](rs2::frame frame) {
+
+            auto currentTime = chrono::high_resolution_clock::now();
+            auto passedTime = chrono::duration_cast<chrono::milliseconds>( currentTime - startTime ).count(); // in milliseconds
+
+            if(passedTime > warmUpTime * 1000 && shotCounter <= numShots){ 
+
+                if(!T265Connected && passedTime / (deltaT * 1000) > shotCounter){
+                    cout << "shot taken" << endl;
+                    shotCounter ++;
+                }
+
+                // Cast the frame to appropriate object type
+                auto fset = frame.as<rs2::frameset>();
+                auto motion = frame.as<rs2::motion_frame>();
+                auto depth = fset.get_depth_frame();
+                auto color = fset.get_color_frame();
+
+                // If casting succeeded and the arrived frame is from gyro stream
+                if (motion && motion.get_profile().stream_type() == RS2_STREAM_GYRO && motion.get_profile().format() == RS2_FORMAT_MOTION_XYZ32F) {
+
+                    // Get gyro measures
+                    rs2_vector gyro_data = motion.get_motion_data();
+
+                    double timeStamp = motion.get_timestamp();
+                    d435_gyro.write((const char*)(&timeStamp), sizeof(double));            
+                    writeVectorToFileBinary(d435_gyro, gyro_data);
+
+                }
+
+                // If casting succeeded and the arrived frame is from accelerometer stream
+                if (motion && motion.get_profile().stream_type() == RS2_STREAM_ACCEL && motion.get_profile().format() == RS2_FORMAT_MOTION_XYZ32F) {
+
+                    // Get accelerometer measures
+                    rs2_vector accel_data = motion.get_motion_data();
+
+                    double timeStamp = motion.get_timestamp();
+                    d435_acc.write((const char*)(&timeStamp), sizeof(double));            
+                    writeVectorToFileBinary(d435_acc, accel_data);
+
+                }
+
+                // If casting succeeded and the arrived frame is from depth stream
+                if(depth) {
+
+                    double timeStamp = depth.get_timestamp();
+                    auto frameNumber = depth.get_frame_number();
+                    stringstream filename;
+
+                    cv::Mat img0(cv::Size(1280, 720), CV_16U, (void*)depth.get_data(), cv::Mat::AUTO_STEP);
+                    filename << "../../Records/" << saveFolderName.str() << "/depth/depth_" << frameNumber << "_" << std::setprecision(13) << timeStamp << ".png";            
+                    cv::imwrite(filename.str() , img0);
+                }
+
+                // If casting succeeded and the arrived frame is from color stream
+                if(color) {
+
+                    double timeStamp = color.get_timestamp();
+                    auto frameNumber = color.get_frame_number();
+                    stringstream filename;
+
+                    cv::Mat img0(cv::Size(1280, 720), CV_8UC3, (void*)color.get_data(), cv::Mat::AUTO_STEP);
+                    cv::Mat img1;
+                    cv::cvtColor(img0, img1, cv::COLOR_BGR2RGB);
+                    filename << "../../Records/" << saveFolderName.str() << "/rgb/rgb_" << frameNumber << "_" << std::setprecision(13) << timeStamp << ".png";            
+                    cv::imwrite(filename.str() , img1);
+                }
 
             }
 
-            if(fisheye2){ 
-
-                double timeStamp = fisheye2.get_timestamp();
-                auto frameNumber = fisheye2.get_frame_number();
-                stringstream filename;
-
-                cv::Mat img0(cv::Size(848, 800), CV_8U, (void*)fisheye2.get_data(), cv::Mat::AUTO_STEP);
-                filename << "../../Records/" << saveFolderName.str() << "/rightFisheye/right_" << frameNumber << "_" << std::setprecision(13) << timeStamp << ".png";            
-                cv::imwrite(filename.str() , img0);              
+            if(!T265Connected && shotCounter > numShots){
+                continueRecord = false;
             }
 
-            if(pose){
-
-                auto poseData = pose.get_pose_data();
-
-                double timeStamp = pose.get_timestamp();
-                t265_pose.write((const char*)(&timeStamp), sizeof(double));
-
-                writeVectorToFileBinary(t265_pose, poseData.translation);
-                writeVectorToFileBinary(t265_pose, poseData.velocity);
-                writeVectorToFileBinary(t265_pose, poseData.acceleration);
-                writeQuaternionToFileBinary(t265_pose, poseData.rotation);
-                writeVectorToFileBinary(t265_pose, poseData.angular_velocity);
-                writeVectorToFileBinary(t265_pose, poseData.angular_acceleration);
-
-                t265_pose.write((const char*)(&poseData.tracker_confidence), sizeof(unsigned int));
-                t265_pose.write((const char*)(&poseData.mapper_confidence), sizeof(unsigned int));
-
-
-            }
-        }
-
-        if(shotCounter > numShots){
-            continueRecord = false;
-        }
-
-    });
-
+        } );
+        
+    }
 
     while(continueRecord){
         usleep(10000);
     }
 
 
-    pipe1.stop();
+    if(T265Connected) pipe1.stop();
+    if(D435Connected) pipe2.stop();
 
     //close the files
 
