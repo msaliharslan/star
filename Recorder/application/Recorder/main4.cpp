@@ -178,12 +178,19 @@ int main(int argc, char **argv) try {
         cout << i + 1 << "\t" << deviceName << endl;
         size_t found = deviceName.find("D435");
         if(found <= deviceName.length()) {
+            
             D435Connected = true;
             cfg1.enable_device(devices[i].get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
             cfg1.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
             cfg1.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F);
             cfg1.enable_stream(RS2_STREAM_DEPTH);
             cfg1.enable_stream(RS2_STREAM_COLOR);
+
+            devices[i].first<rs2::color_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 1); 
+            devices[i].first<rs2::depth_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 1); 
+            devices[i].first<rs2::motion_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 1); 
+
+
         }
         else {
             T265Connected = true;
@@ -194,6 +201,9 @@ int main(int argc, char **argv) try {
             cfg1.enable_stream(RS2_STREAM_FISHEYE, 1);
             cfg1.enable_stream(RS2_STREAM_FISHEYE, 2);
         }
+
+
+
     }
 
 
@@ -264,6 +274,8 @@ int main(int argc, char **argv) try {
                     double timeStamp = fisheye1.get_timestamp();
                     auto frameNumber = fisheye1.get_frame_number();
                     stringstream filename;
+
+                    cout << fisheye1.get_frame_timestamp_domain() << endl;
 
                     cv::Mat img0(cv::Size(848, 800), CV_8U, (void*)fisheye1.get_data(), cv::Mat::AUTO_STEP);
                     filename << "../../Records/" << saveFolderName.str() << "/leftFisheye/left_" << frameNumber << "_" << std::setprecision(13) << timeStamp << ".png";            
