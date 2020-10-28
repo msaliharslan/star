@@ -8,7 +8,7 @@
 #include <experimental/filesystem>
 #include <time.h>
 #include <chrono>
-
+#include <sys/ioctl.h>
 
 using namespace rs2;
 using namespace std;
@@ -41,7 +41,6 @@ void writeQuaternionToFileBinary(ofstream & file, rs2_quaternion & quaternion){
 
 
 int main(int argc, char **argv) try {
-
 
     //initialize
 
@@ -183,12 +182,12 @@ int main(int argc, char **argv) try {
             cfg1.enable_device(devices[i].get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
             cfg1.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
             cfg1.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F);
-            cfg1.enable_stream(RS2_STREAM_DEPTH);
-            cfg1.enable_stream(RS2_STREAM_COLOR);
+            // cfg1.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_Z16, 30);
+            cfg1.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_RGB8, 30);
 
-            devices[i].first<rs2::color_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 1); 
-            devices[i].first<rs2::depth_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 1); 
-            devices[i].first<rs2::motion_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 1); 
+            // devices[i].first<rs2::color_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 0); 
+            // devices[i].first<rs2::depth_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 0); 
+            // devices[i].first<rs2::motion_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 0); 
 
 
         }
@@ -368,7 +367,7 @@ int main(int argc, char **argv) try {
 
                 // If casting succeeded and the arrived frame is from depth stream
                 if(depth) {
-
+                    cout <<  "in depth " << endl;
                     double timeStamp = depth.get_timestamp();
                     auto frameNumber = depth.get_frame_number();
                     stringstream filename;
@@ -380,7 +379,7 @@ int main(int argc, char **argv) try {
 
                 // If casting succeeded and the arrived frame is from color stream
                 if(color) {
-
+                    cout << "in RGB" << endl;
                     double timeStamp = color.get_timestamp();
                     auto frameNumber = color.get_frame_number();
                     stringstream filename;
