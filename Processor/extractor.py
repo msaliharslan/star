@@ -35,7 +35,7 @@ for bagFile in fileBagNames:
 	bagName = bag.filename
 
 	#create a new directory
-	folder = "../Records/activeCsv/" + bagName.rstrip('.bag').lstrip("../Records/")
+	folder = "Records/activeCsv/" + bagName.rstrip('.bag').lstrip("../Records/")
 	try:	#else already exists
 		os.makedirs(folder)
 	except:

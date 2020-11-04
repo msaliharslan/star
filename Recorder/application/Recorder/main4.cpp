@@ -8,7 +8,6 @@
 #include <experimental/filesystem>
 #include <time.h>
 #include <chrono>
-#include <sys/ioctl.h>
 
 using namespace rs2;
 using namespace std;
@@ -17,11 +16,11 @@ namespace fs = std::experimental::filesystem;
 
 const double deltaT = 3; //seconds
 const int numShots = 6; 
-const double warmUpTime = 2; //seconds
+const double warmUpTime = 7; //seconds
 
 bool continueRecord = true;
 
-auto startTime = std::chrono::high_resolution_clock::now();
+auto startTime = std::chrono::steady_clock::now();
 
 void writeVectorToFileBinary(ofstream & file, rs2_vector & vector){
     
@@ -177,18 +176,17 @@ int main(int argc, char **argv) try {
         cout << i + 1 << "\t" << deviceName << endl;
         size_t found = deviceName.find("D435");
         if(found <= deviceName.length()) {
-            
             D435Connected = true;
-            cfg1.enable_device(devices[i].get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
-            cfg1.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
-            cfg1.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F);
-            // cfg1.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_Z16, 30);
-            cfg1.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_RGB8, 30);
 
-            // devices[i].first<rs2::color_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 0); 
-            // devices[i].first<rs2::depth_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 0); 
-            // devices[i].first<rs2::motion_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 0); 
-
+            devices[i].first<rs2::color_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 0); 
+            devices[i].first<rs2::depth_stereo_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 0); 
+            devices[i].first<rs2::motion_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 0); 
+            
+            cfg2.enable_device(devices[i].get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
+            // cfg2.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
+            // cfg2.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F);
+            cfg2.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_Z16, 15);
+            cfg2.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_RGB8, 15);
 
         }
         else {
@@ -221,13 +219,13 @@ int main(int argc, char **argv) try {
         pipe1.start(cfg1, [&](rs2::frame frame)
         {
 
-            auto currentTime = chrono::high_resolution_clock::now();
+            auto currentTime = chrono::steady_clock::now();
             auto passedTime = chrono::duration_cast<chrono::milliseconds>( currentTime - startTime ).count(); // in milliseconds
 
             if( passedTime > warmUpTime * 1000 && shotCounter <= numShots){
 
-                if(passedTime / (deltaT * 1000) > shotCounter){
-                    cout << "shot taken" << endl;
+                if((passedTime - warmUpTime * 1000) / (deltaT * 1000) > shotCounter){
+                    cout << "shot taken t265" << endl;
                     shotCounter ++;
                 }
 
@@ -274,7 +272,7 @@ int main(int argc, char **argv) try {
                     auto frameNumber = fisheye1.get_frame_number();
                     stringstream filename;
 
-                    cout << fisheye1.get_frame_timestamp_domain() << endl;
+                    // cout << fisheye1.get_frame_timestamp_domain() << endl;
 
                     cv::Mat img0(cv::Size(848, 800), CV_8U, (void*)fisheye1.get_data(), cv::Mat::AUTO_STEP);
                     filename << "../../Records/" << saveFolderName.str() << "/leftFisheye/left_" << frameNumber << "_" << std::setprecision(13) << timeStamp << ".png";            
@@ -325,12 +323,12 @@ int main(int argc, char **argv) try {
         
         pipe2.start(cfg2, [&](rs2::frame frame) {
 
-            auto currentTime = chrono::high_resolution_clock::now();
+            auto currentTime = chrono::steady_clock::now();
             auto passedTime = chrono::duration_cast<chrono::milliseconds>( currentTime - startTime ).count(); // in milliseconds
 
             if(passedTime > warmUpTime * 1000 && shotCounter <= numShots){ 
 
-                if(!T265Connected && passedTime / (deltaT * 1000) > shotCounter){
+                if(!T265Connected && (passedTime - warmUpTime * 1000)/ (deltaT * 1000) > shotCounter){
                     cout << "shot taken" << endl;
                     shotCounter ++;
                 }
@@ -367,9 +365,10 @@ int main(int argc, char **argv) try {
 
                 // If casting succeeded and the arrived frame is from depth stream
                 if(depth) {
-                    cout <<  "in depth " << endl;
                     double timeStamp = depth.get_timestamp();
                     auto frameNumber = depth.get_frame_number();
+
+                    // cout << "Depth frame num: " << frameNumber << endl;
                     stringstream filename;
 
                     cv::Mat img0(cv::Size(1280, 720), CV_16U, (void*)depth.get_data(), cv::Mat::AUTO_STEP);
@@ -379,7 +378,6 @@ int main(int argc, char **argv) try {
 
                 // If casting succeeded and the arrived frame is from color stream
                 if(color) {
-                    cout << "in RGB" << endl;
                     double timeStamp = color.get_timestamp();
                     auto frameNumber = color.get_frame_number();
                     stringstream filename;
@@ -405,7 +403,7 @@ int main(int argc, char **argv) try {
         usleep(10000);
     }
 
-
+    usleep(1000000);
     if(T265Connected) pipe1.stop();
     if(D435Connected) pipe2.stop();
 
