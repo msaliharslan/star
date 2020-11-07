@@ -28,6 +28,39 @@ fisheyeHeight = 848
 
 def undistortFisheyeImages(fisheyeImages, K, D):
     
+    
+    # We calculate the undistorted focal length:
+    #
+    #         h
+    # -----------------
+    #  \      |      /
+    #    \    | f  /
+    #     \   |   /
+    #      \ fov /
+    #        \|/
+    stereo_fov_rad = 90 * (np.pi/180)  # 90 degree desired fov
+    stereo_height_px = 700          # 300x300 pixel stereo output
+    stereo_focal_px = stereo_height_px/2 / np.tan(stereo_fov_rad/2)
+
+    # We set the left rotation to identity and the right rotation
+    # the rotation between the cameras
+    R = np.eye(3)
+
+    # The stereo algorithm needs max_disp extra pixels in order to produce valid
+    # disparity on the desired output region. This changes the width, but the
+    # center of projection should be on the center of the cropped image
+    stereo_width_px = stereo_height_px
+    stereo_size = (stereo_width_px, stereo_height_px)
+    stereo_cx = (stereo_height_px - 1)/2
+    stereo_cy = (stereo_height_px - 1)/2
+
+    # Construct the left and right projection matrices, the only difference is
+    # that the right projection matrix should have a shift along the x axis of
+    # baseline*focal_length
+    P = np.array([[stereo_focal_px, 0, stereo_cx, 0],
+                       [0, stereo_focal_px, stereo_cy, 0],
+                       [0,               0,         1, 0]])    
+    
     undistortedImages = []
     
     nk = K.copy()
@@ -37,7 +70,7 @@ def undistortFisheyeImages(fisheyeImages, K, D):
     
     for image in fisheyeImages:
             
-        undistorted = cv2.fisheye.undistortImage(image, K=K, D=D, Knew=nk, new_size=(int(fisheyeHeight), int(fisheyeWidth)))
+        undistorted = cv2.fisheye.undistortImage(image, K=K, D=D, Knew=P, new_size=(int(stereo_height_px), int(stereo_width_px)))
         undistortedImages.append(undistorted)
 
     return undistortedImages
@@ -65,15 +98,15 @@ def drawChessboardCornersForImages(images_):
     return newImages
 
 
-fileNames = glob.glob("Recorder/Records/2_2020-11-03_18:00/leftFisheye/*" )
+fileNames = glob.glob("Recorder/Records/2_2020-11-03_20_58/leftFisheye/*" )
          
 distorted = []
-for i in range(0, len(fileNames), 25):
-    image = cv2.imread(fileNames[i])
-    distorted.append(image)
+# for i in range(0, len(fileNames), 25):
+#     image = cv2.imread(fileNames[i])
+#     distorted.append(image)
     
-# test = cv2.imread("Calibration/Missions/Mission_2/test.png")
-# distorted.append(test)
+test = cv2.imread("Calibration/Missions/Mission_2/left_649_1604426768746.png")
+distorted.append(test)
 undistorted = undistortFisheyeImages(distorted, K1, D1)
 
 dotted = drawChessboardCornersForImages(undistorted)
