@@ -79,7 +79,7 @@ record_EXTERNAL_OBJECTS =
 
 record: CMakeFiles/record.dir/main4.cpp.o
 record: CMakeFiles/record.dir/build.make
-record: /usr/lib/x86_64-linux-gnu/librealsense2.so
+record: /usr/local/lib/librealsense2.so
 record: /home/salih/anaconda3/lib/libopencv_stitching.so.3.4.2
 record: /home/salih/anaconda3/lib/libopencv_superres.so.3.4.2
 record: /home/salih/anaconda3/lib/libopencv_videostab.so.3.4.2

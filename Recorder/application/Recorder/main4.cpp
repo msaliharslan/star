@@ -20,8 +20,6 @@ const double warmUpTime = 7; //seconds
 
 bool continueRecord = true;
 
-auto startTime = std::chrono::steady_clock::now();
-
 void writeVectorToFileBinary(ofstream & file, rs2_vector & vector){
     
     file.write((const char*) &(vector.x), sizeof(float));
@@ -185,8 +183,8 @@ int main(int argc, char **argv) try {
             cfg2.enable_device(devices[i].get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
             // cfg2.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
             // cfg2.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F);
-            cfg2.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_Z16, 15);
-            cfg2.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_RGB8, 15);
+            cfg2.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_Z16, 30);
+            cfg2.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_RGB8, 30);
 
         }
         else {
@@ -211,6 +209,8 @@ int main(int argc, char **argv) try {
     pipeline pipe2(ctx);
 
     int shotCounter = 1;
+    auto startTime = std::chrono::steady_clock::now();
+
 
     //T265
 

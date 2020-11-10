@@ -12,9 +12,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 os.chdir("../../../")
-print(os.getcwd())
-
-
 
 K1 = np.array([[284.501708984375, 0.0, 430.9294128417969], [0.0, 285.4164123535156, 394.66510009765625], [0.0, 0.0, 1.0]])
 D1 = np.array([-0.00012164260260760784, 0.03437558934092522, -0.03252582997083664, 0.004925379063934088])
@@ -39,7 +36,7 @@ def undistortFisheyeImages(fisheyeImages, K, D):
     #      \ fov /
     #        \|/
     stereo_fov_rad = 90 * (np.pi/180)  # 90 degree desired fov
-    stereo_height_px = 700          # 300x300 pixel stereo output
+    stereo_height_px = 1000          # 300x300 pixel stereo output
     stereo_focal_px = stereo_height_px/2 / np.tan(stereo_fov_rad/2)
 
     # We set the left rotation to identity and the right rotation
@@ -85,7 +82,9 @@ def drawChessboardCornersForImages(images_):
     
     for image in images:
         
-        ret, corners = cv2.findChessboardCorners(image, CHECKERBOARD, cv2.CALIB_CB_ADAPTIVE_THRESH+cv2.CALIB_CB_FAST_CHECK+cv2.CALIB_CB_NORMALIZE_IMAGE)
+        # ret, corners = cv2.findChessboardCorners(image, CHECKERBOARD, cv2.CALIB_CB_ADAPTIVE_THRESH+cv2.CALIB_CB_FAST_CHECK+cv2.CALIB_CB_NORMALIZE_IMAGE)
+        ret, corners = cv2.findChessboardCornersSB(image, CHECKERBOARD, cv2.CALIB_CB_ACCURACY+cv2.CALIB_CB_NORMALIZE_IMAGE)
+        # corners = cv2.goodFeaturesToTrack(gray_img,25,0.01,10)
        
         if(ret):
                         
@@ -98,12 +97,12 @@ def drawChessboardCornersForImages(images_):
     return newImages
 
 
-fileNames = glob.glob("Recorder/Records/2_2020-11-03_20_58/leftFisheye/*" )
+fileNames = glob.glob("/home/salih/Documents/Records/4_2020-11-03_21:02/leftFisheye/*" )
          
 distorted = []
-# for i in range(0, len(fileNames), 25):
-#     image = cv2.imread(fileNames[i])
-#     distorted.append(image)
+for i in range(0, len(fileNames), 25):
+    image = cv2.imread(fileNames[i])
+    distorted.append(image)
     
 test = cv2.imread("Calibration/Missions/Mission_2/left_649_1604426768746.png")
 distorted.append(test)
@@ -111,8 +110,11 @@ undistorted = undistortFisheyeImages(distorted, K1, D1)
 
 dotted = drawChessboardCornersForImages(undistorted)
 
-# try:
-#     os.mkdir("./temp")
+try:
+    os.mkdir("./temp")
+    
+except:
+    print("temp already exists")
     
 for i,img in enumerate(dotted):
     cv2.imwrite("./temp/"+str(i)+".png", img)

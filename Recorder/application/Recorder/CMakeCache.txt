@@ -204,7 +204,7 @@ CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 OpenCV_DIR:PATH=/home/salih/anaconda3/share/OpenCV
 
 //Path to a library.
-REALSENSE2_FOUND:FILEPATH=/usr/lib/x86_64-linux-gnu/librealsense2.so
+REALSENSE2_FOUND:FILEPATH=/usr/local/lib/librealsense2.so
 
 //Value Computed by CMake
 record_BINARY_DIR:STATIC=/home/salih/Documents/realsense-workspace/star/Recorder/application/Recorder

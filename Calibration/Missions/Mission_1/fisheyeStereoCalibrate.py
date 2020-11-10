@@ -6,7 +6,7 @@ import cv2
 import glob
 import os
 
-
+os.chdir("../../../")
 ###############
 # Common Functions
 ###############
@@ -60,38 +60,54 @@ D2 = np.array([0.0009760634857229888, 0.030147459357976913, -0.02769969031214714
 ###############
 
 
-boardWidth = 9
-boardHeight = 9
+boardWidth = 8
+boardHeight = 8
 CHECKERBOARD = (boardHeight, boardWidth)
-squareSize = 0.03 # 3cm
+squareSize = 0.033 # 3.3 cm
 
 
 setNumber = 1
-fileNames = glob.glob("../../../SnapShots/t265/syncShots/set" + str(setNumber) + "/*.png" )
-imageCount = int(len(fileNames) / 2)
+fileNamesLeft = glob.glob("Recorder/Records/1_2020-11-03_20:56/leftFisheye/*.png" )
+fileNamesRight = glob.glob("Recorder/Records/1_2020-11-03_20:56/rightFisheye/*.png" )
+
+assert(len(fileNamesLeft) == len(fileNamesRight) )
+
 
 objectPointDefault = []
 for i in range(boardHeight): #Note: the order how to fill this objectPointsDefault is not clear, todo: make sure of it
     for j in range(boardWidth):
-        objectPointDefault.append([i, j, 0])
+        objectPointDefault.append([squareSize * i, squareSize * j, 0])
+        
+objectPointDefault = np.array(objectPointDefault, np.float32)
+objectPointDefault = np.float32(objectPointDefault[:, np.newaxis, :])
 
-objectPointss =  [] 
-imagePoints1 =  []
-imagePoints2 =  [] 
+objp = np.zeros((8*8, 3), np.float32)
+objp[:, :2] = np.mgrid[0:8, 0:8].T.reshape(-1, 2)
+objp = objp * squareSize
+objp = np.float32(objp[:, np.newaxis, :])
 
+imagePointsLeft =  []
+imagePointsRight =  [] 
 
+counter = 0
+imageCount = len(fileNamesLeft)
 for i in range(imageCount):
 
-    imageIndex, cameraIndex = fileNames[i].split("_")
 
-    imageIndex = int(imageIndex)
-    cameraIndex = int(cameraIndex)
+    imageLeft = cv2.imread(fileNamesLeft[i], cv2.IMREAD_UNCHANGED)
+    imageRight = cv2.imread(fileNamesRight[i], cv2.IMREAD_UNCHANGED)
 
-    image = cv2.imread(os.path.join("SnapShots/t265/syncShots", fileNames[i]), cv2.IMREAD_UNCHANGED)
+    retL, cornersL = cv2.findChessboardCornersSB(imageLeft, CHECKERBOARD, cv2.CALIB_CB_ACCURACY+cv2.CALIB_CB_NORMALIZE_IMAGE)
+    retR, cornersR = cv2.findChessboardCornersSB(imageRight, CHECKERBOARD, cv2.CALIB_CB_ACCURACY+cv2.CALIB_CB_NORMALIZE_IMAGE)
 
-    ret, corners = cv2.findChessboardCorners(image, CHECKERBOARD, cv2.CALIB_CB_ADAPTIVE_THRESH+cv2.CALIB_CB_FAST_CHECK+cv2.CALIB_CB_NORMALIZE_IMAGE)
-
-    cv2.cornerSubPix(image, corners, (5, 5), (-1, -1), (cv2.CV_TERMCRIT_EPS + cv2.CV_TERMCRIT_ITER, 30, 0.1))
+    if(retL and retR):
+        # cv2.cornerSubPix(imageLeft, cornersL, (5, 5), (-1, -1), (cv2.CV_TERMCRIT_EPS + cv2.CV_TERMCRIT_ITER, 30, 0.1))
+        # cv2.cornerSubPix(imageRight, cornersR, (5, 5), (-1, -1), (cv2.CV_TERMCRIT_EPS + cv2.CV_TERMCRIT_ITER, 30, 0.1))
+        imagePointsLeft.append(cornersL)
+        imagePointsRight.append(cornersR)
+        counter +=1
+        if counter == 30:
+            break
 
 
 
@@ -102,7 +118,7 @@ imageSize = (fisheyeWidth, fisheyeHeight)
 flags = cv2.fisheye.CALIB_FIX_INTRINSIC
 criteria = (cv2.TermCriteria_COUNT + cv2.TermCriteria_EPS, 100, 1e-3)
 
-retval, K1, D1, K2, D2, R_1, T_1 = cv2.fisheye.stereoCalibrate(objectPoints, imagePoints1, imagePoints2, K1, D1, K2, D2, imageSize, flags = flags)
+retval, K1, D1, K2, D2, R_1, T_1 = cv2.fisheye.stereoCalibrate(objp, imagePointsLeft, imagePointsRight, K1, D1, K2, D2, imageSize, flags = flags)
 
 F_1 = calculateFundamentalMatrix(K1, K2, R_1, T_1)
 

@@ -27,8 +27,6 @@ time.h
 -
 chrono
 -
-sys/ioctl.h
--
 
 /home/salih/anaconda3/include/boost/assert.hpp
 boost/config.hpp
