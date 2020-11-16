@@ -6,7 +6,8 @@ import cv2
 import glob
 import os
 
-os.chdir("../../../")
+if(os.getcwd().split('/')[-1] != 'star'):
+    os.chdir("../../../")
 ###############
 # Common Functions
 ###############
@@ -67,10 +68,14 @@ squareSize = 0.033 # 3.3 cm
 
 
 setNumber = 1
-fileNamesLeft = glob.glob("Recorder/Records/2_2020-11-03_20_58/leftFisheye/*.png" )
-fileNamesRight = glob.glob("Recorder/Records/2_2020-11-03_20_58/rightFisheye/*.png" )
+fileNamesLeft = glob.glob("Recorder/Records/4_2020-11-03_21:02/leftFisheye/*.png" )
+fileNamesRight = glob.glob("Recorder/Records/4_2020-11-03_21:02/rightFisheye/*.png" )
 
-# assert(len(fileNamesLeft) == len(fileNamesRight) )
+fileNamesLeft.sort()
+fileNamesRight.sort()
+
+
+assert(len(fileNamesLeft) == len(fileNamesRight) )
 
 
 objectPointDefault = []
@@ -91,7 +96,7 @@ imagePointsRight =  []
 
 counter = 0
 imageCount = len(fileNamesLeft)
-for i in range(imageCount):
+for i in range(0, imageCount, 10):
 
 
     imageLeft = cv2.imread(fileNamesLeft[i], cv2.IMREAD_UNCHANGED)
@@ -101,13 +106,13 @@ for i in range(imageCount):
     retR, cornersR = cv2.findChessboardCornersSB(imageRight, CHECKERBOARD, cv2.CALIB_CB_ACCURACY+cv2.CALIB_CB_NORMALIZE_IMAGE)
 
     if(retL and retR):
-        # cv2.cornerSubPix(imageLeft, cornersL, (5, 5), (-1, -1), (cv2.CV_TERMCRIT_EPS + cv2.CV_TERMCRIT_ITER, 30, 0.1))
-        # cv2.cornerSubPix(imageRight, cornersR, (5, 5), (-1, -1), (cv2.CV_TERMCRIT_EPS + cv2.CV_TERMCRIT_ITER, 30, 0.1))
+        cv2.cornerSubPix(imageLeft, cornersL, (5, 5), (-1, -1), (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001))
+        cv2.cornerSubPix(imageRight, cornersR, (5, 5), (-1, -1), (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001))
         imagePointsLeft.append(cornersL)
         imagePointsRight.append(cornersR)
-        counter +=1
-        if counter == 30:
-            break
+        # counter +=1
+        # if counter == 30:
+        #     break
 
 
 N_OK = len(imagePointsLeft)
@@ -128,9 +133,9 @@ fisheyeHeight = 848
 imageSize = (fisheyeWidth, fisheyeHeight)
 
 flags = cv2.fisheye.CALIB_FIX_INTRINSIC
-criteria = (cv2.TermCriteria_COUNT + cv2.TermCriteria_EPS, 100, 1e-3)
+criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 1e-5)
 
-retval, K1, D1, K2, D2, R_1, T_1 = cv2.fisheye.stereoCalibrate(objpoints, imagePointsLeft, imagePointsRight, K1, D1, K2, D2, imageSize, flags = flags)
+retval, K1, D1, K2, D2, R_1, T_1 = cv2.fisheye.stereoCalibrate(objpoints, imagePointsLeft, imagePointsRight, K1, D1, K2, D2, imageSize, flags = flags, criteria=criteria)
 
 F_1 = calculateFundamentalMatrix(K1, K2, R_1, T_1)
 

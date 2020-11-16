@@ -4,7 +4,8 @@ import os
 import numpy as np
 import cv2
 
-os.chdir("..")
+if(os.getcwd().split('/')[-1] != 'star'):
+    os.chdir("../../../")
 sys.path.append(os.getcwd())
 
 import matplotlib.pyplot as plt

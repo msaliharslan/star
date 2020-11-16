@@ -1,16 +1,16 @@
 
-Mission 1)
-    #1 Find rotation and transformation matrices between two fisheye cameras from known 3D object(chessboard).
-    #2 Find rotation and transformation matrices between two fisheye cameras from given intel matrices.
-    Compare the two.
+Mission 1) COMPLETED
+    #1 Find rotation and transformation matrices between two fisheye cameras from known 3D object(chessboard). CHECK
+    #2 Find rotation and transformation matrices between two fisheye cameras from given intel matrices. CHECK
+    Compare the two. CHECK
 
 Mission 2) COMPLETED
     #1 Undistort and find checkerboard on fisheye images
     
-Mission 3)
+Mission 3) COMPLETED
     #1 Find out how to use extrinsic calibration parameters
     
-Mission 4)
+Mission 4) COMPLETED
     #1 By using two fisheye images and the chessboard corner detections from those estimate the Rotation and Translation between them
 
 Mission 5)

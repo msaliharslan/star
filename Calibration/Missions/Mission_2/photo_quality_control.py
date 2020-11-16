@@ -11,8 +11,9 @@ import glob
 import matplotlib.pyplot as plt
 import numpy as np
 
-os.chdir("../../../")
-
+if(os.getcwd().split('/')[-1] != 'star'):
+    os.chdir("../../../")
+    
 K1 = np.array([[284.501708984375, 0.0, 430.9294128417969], [0.0, 285.4164123535156, 394.66510009765625], [0.0, 0.0, 1.0]])
 D1 = np.array([-0.00012164260260760784, 0.03437558934092522, -0.03252582997083664, 0.004925379063934088])
 
@@ -70,13 +71,14 @@ def undistortFisheyeImages(fisheyeImages, K, D):
         undistorted = cv2.fisheye.undistortImage(image, K=K, D=D, Knew=P, new_size=(int(stereo_height_px), int(stereo_width_px)))
         undistortedImages.append(undistorted)
 
-    return undistortedImages
+    return undistortedImages, P[:,:-1]
 
 def drawChessboardCornersForImages(images_):
     
     images = np.copy(images_)
     
     newImages = []
+    cornerss   = []
     
     CHECKERBOARD = (8,8) 
     
@@ -88,27 +90,42 @@ def drawChessboardCornersForImages(images_):
        
         if(ret):
                         
-            for corner in corners:
+            for i, corner in enumerate(corners):
                 
-                cv2.circle(image, (int(corner[0][0]),int(corner[0][1])), 4,  (255,255,255), thickness=-1,)        
+                cv2.circle(image, (int(corner[0][0]),int(corner[0][1])), i,  (255,255,255), thickness=1)        
         
             newImages.append(image)
-                    
-    return newImages
+            cornerss.append(corners)        
+            
+    return newImages, cornerss
 
 
-fileNames = glob.glob("/home/salih/Documents/Records/4_2020-11-03_21:02/leftFisheye/*" )
+fileNamesL = glob.glob("Recorder/Records/5_2020-11-03_21:03/leftFisheye/*" )
+fileNamesR = glob.glob("Recorder/Records/5_2020-11-03_21:03/rightFisheye/*")
+
+fileNamesL.sort()
+fileNamesR.sort()
+
+# for nameL, nameR in zip(fileNamesL, fileNamesR):
+#     nameL = nameL.rstrip('.png').split('_')[-2]
+#     nameR = nameR.rstrip('.png').split('_')[-2]
+#     print(int(nameL) - int(nameR))
          
-distorted = []
-for i in range(0, len(fileNames), 25):
-    image = cv2.imread(fileNames[i])
-    distorted.append(image)
+distortedL = []
+distortedR = []
+for i in range(0, len(fileNamesL), 50):
+    imageL = cv2.imread(fileNamesL[i])
+    imageR = cv2.imread(fileNamesR[i])
+    distortedL.append(imageL)
+    distortedR.append(imageR)
     
-test = cv2.imread("Calibration/Missions/Mission_2/left_649_1604426768746.png")
-distorted.append(test)
-undistorted = undistortFisheyeImages(distorted, K1, D1)
+# test = cv2.imread("Calibration/Missions/Mission_2/left_649_1604426768746.png")
+# distorted.append(test)
+undistortedL, KL = undistortFisheyeImages(distortedL, K1, D1)
+undistortedR, KR = undistortFisheyeImages(distortedR, K2, D2)
 
-dotted = drawChessboardCornersForImages(undistorted)
+dottedL, cornersL = drawChessboardCornersForImages(undistortedL)
+dottedR, cornersR = drawChessboardCornersForImages(undistortedR)
 
 try:
     os.mkdir("./temp")
@@ -116,13 +133,14 @@ try:
 except:
     print("temp already exists")
     
-for i,img in enumerate(dotted):
+for i,img in enumerate(dottedL):
+    img = cv2.hconcat([img, dottedR[i]])
     cv2.imwrite("./temp/"+str(i)+".png", img)
     
     
-print(len(distorted))
-print(len(undistorted))
-print(len(dotted))
+print(len(distortedL) + len(distortedR))
+print(len(undistortedL) + len(undistortedR))
+print(len(dottedL) + len(dottedR))
     
     
     
