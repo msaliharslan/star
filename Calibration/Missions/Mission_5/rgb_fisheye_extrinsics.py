@@ -108,6 +108,8 @@ objp = objp * squareSize
 
 imagePointsLeft =  []
 imagePointsRgb =  [] 
+imgsRgbWP = []
+imgsLWP = []
 
 counter = 0
 imageCount = len(leftUndistorted)
@@ -124,22 +126,78 @@ for i in range(imageCount):
         cv2.cornerSubPix(imageRgb, cornersRgb, (5, 5), (-1, -1), (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001))
         imagePointsLeft.append(cornersL)
         imagePointsRgb.append(cornersRgb)
+        imgsLWP.append(cv2.cvtColor(imageLeft, cv2.COLOR_GRAY2RGB))
+        imgsRgbWP.append(cv2.cvtColor(imageRgb, cv2.COLOR_GRAY2RGB))
 
 N_OK = len(imagePointsLeft)
 
-objp = np.array([objp]*len(imagePointsLeft), dtype=np.float64)
-imagePointsLeft = np.asarray(imagePointsLeft, dtype=np.float64)
-imagePointsRgb = np.asarray(imagePointsRgb, dtype=np.float64)
-
+objp = np.array([objp]*len(imagePointsLeft), dtype=np.float32)
 objp = np.reshape(objp, (N_OK, 1, CHECKERBOARD[0]*CHECKERBOARD[1], 3))
-imagePointsLeft = np.reshape(imagePointsLeft, (N_OK, 1, CHECKERBOARD[0]*CHECKERBOARD[1], 2))
-imagePointsRgb = np.reshape(imagePointsRgb, (N_OK, 1, CHECKERBOARD[0]*CHECKERBOARD[1], 2))
 
-retval, cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, R, T, E, F = cv2.stereoCalibrate(objp, imageLeft, imagePointsRgb, KL, D, KRGB, D, (0,0), flags=cv2.CALIB_FIX_INTRINSIC)
+retval, cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, R, T, E, F = cv2.stereoCalibrate(objp, imagePointsLeft, imagePointsRgb, KL, D, KRGB, D, (0,0), flags=cv2.CALIB_FIX_INTRINSIC)
 
 
+def drawlines(img1,img2,lines,pts1,pts2):
+    ''' img1 - image on which we draw the epilines for the points in img2
+        lines - corresponding epilines '''
+    r,c,_ = img1.shape
+    # img1 = cv2.cvtColor(img1,cv2.COLOR_GRAY2BGR)
+    # img2 = cv2.cvtColor(img2,cv2.COLOR_GRAY2BGR)
+    for r,pt1,pt2 in zip(lines,pts1,pts2):
+        pt1 = tuple(map(tuple, pt1))[0]
+        pt2 = tuple(map(tuple, pt2))[0]
+        color = tuple(np.random.randint(0,255,3).tolist())
+        x0,y0 = map(int, [0, -r[2]/r[1] ])
+        x1,y1 = map(int, [c, -(r[2]+r[0]*c)/r[1] ])
+        img1 = cv2.line(img1, (x0,y0), (x1,y1), color,1)
+        img1 = cv2.circle(img1,pt1,5,color,-1)
+        img2 = cv2.circle(img2,pt2,5,color,-1)
+    return img1,img2
 
 
+errs = []
+for i in range(N_OK):
+    lines1 = cv2.computeCorrespondEpilines(imagePointsRgb[i].reshape(-1,1,2), 2, F)
+    lines1 = lines1.reshape(-1,3)
+    img5,img6 = drawlines(imgsLWP[i], imgsRgbWP[i],lines1, imagePointsLeft[i], imagePointsRgb[i])
+    # Find epilines corresponding to points in left image (first image) and
+    # drawing its lines on right image
+    lines2 = cv2.computeCorrespondEpilines(imagePointsLeft[i].reshape(-1,1,2), 1,F)
+    lines2 = lines2.reshape(-1,3)
+    img3,img4 = drawlines(imgsRgbWP[i], imgsLWP[i],lines2, imagePointsRgb[i], imagePointsLeft[i])
+    plt.subplot(121),plt.imshow(img5)
+    plt.subplot(122),plt.imshow(img3)
+    plt.show()
+    
+    # img3 = cv2.resize(img3, img5.shape)
+    # img = cv2.hconcat([img5, img3])
+    h1, w1 = img3.shape[:2]
+    h2, w2 = img5.shape[:2]
+
+    #create empty matrix
+    img = np.zeros((max(h1, h2), w1+w2,3), np.uint8)
+
+    #combine 2 images
+    img[:h1, :w1,:3] = img3
+    img[:h2, w1:w1+w2,:3] = img5
+    cv2.imwrite("./temp/"+"George_Bush"+ str(i) +".png", img)
+    
+    
+    ####################################
+    ## Error calculation
+    ######################
+    
+    err = 0
+    
+    for pt, l in zip(imagePointsLeft[i], lines1):
+        err += abs(pt[0,0] * l[0] + pt[0,1] * l[1] + l[2])
+    
+    for pt, l in zip(imagePointsRgb[i], lines2):
+        err += abs(pt[0,0] * l[0] + pt[0,1] * l[1] + l[2])
+        
+        
+    err /= lines1.shape[0] + lines2.shape[0]
+    errs.append(err)
 
 
 
