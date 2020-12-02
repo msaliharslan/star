@@ -13,8 +13,10 @@ Mission 3) COMPLETED
 Mission 4) COMPLETED
     #1 By using two fisheye images and the chessboard corner detections from those estimate the Rotation and Translation between them
 
-Mission 5)
+Mission 5) COMPLETED
     #1 Find extrinsics between RGB and Fisheye
     
 Mission 6)
-    #1 using extrinsics map depth onto RGB(?)
+    #1 confirm circular tranformations are identity
+    #2 using extrinsics map depth onto RGB(?)
+    #3 using extrinsics map depth-rgb onto fisheye (recreate fisheye with color pixels)

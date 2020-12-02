@@ -4,7 +4,7 @@ import shutil
 
 #parameters
 
-targetRecordIndex = 1
+targetRecordIndex = 8
 numShots = 18 
 
 
