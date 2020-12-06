@@ -1,9 +1,1 @@
-fisheyeSnapshots/video/right.bag
-fisheyeSnapshots/video/left.bag
-fisheyeSnapshots/video/bottomLeft.bag
-fisheyeSnapshots/video/topRight.bag
-fisheyeSnapshots/video/plane.bag
-fisheyeSnapshots/video/top.bag
-fisheyeSnapshots/video/bottom.bag
-fisheyeSnapshots/video/topLeft.bag
-fisheyeSnapshots/video/bottomRight.bag
+Records/test3.bag

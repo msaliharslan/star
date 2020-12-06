@@ -345,38 +345,23 @@ if(record):
     # 2 rgb -> right
     # 3 right -> left
     file = open("Calibration/Missions/Mission_5/extrinsics.txt", "w")
-    file.write("\n*Translation from RGB to Left Fisheye: \n")
+    file.write("\n*Translation from RGB to Left Fisheye:\n")
     file.write(str(T1))
-    file.write("\n*Rotation from RGB to Left Fisheye: \n")
+    file.write("\n*Rotation from RGB to Left Fisheye:\n")
     file.write(str(R1))
     
-    file.write("\n*Translation from RGB to Right Fisheye: \n")
+    file.write("\n*Translation from RGB to Right Fisheye:\n")
     file.write(str(T2))
-    file.write("\n*Rotation from RGB to Right Fisheye: \n")
+    file.write("\n*Rotation from RGB to Right Fisheye:\n")
     file.write(str(R2))
     
-    file.write("\n*Translation from Right to Left Fisheye: \n")
+    file.write("\n*Translation from Right to Left Fisheye:\n")
     file.write(str(T3))
-    file.write("\n*Rotation from Right to Left Fisheye: \n")
+    file.write("\n*Rotation from Right to Left Fisheye:\n")
     file.write(str(R3))
     file.close()
 
 
-
-import re
-from ast import literal_eval
-
-import numpy as np
-
-
-a = "[[ 0.99998026  0.00576925  0.00249038] \
-[-0.00577328  0.99998203  0.00161431] \
-[-0.00248102 -0.00162865  0.9999956 ]]"
-
-
-# a = """[[[ 0 1][ 2 3]]]"""
-a = re.sub(r"([^[])\s+([^]])", r"\1, \2", a)
-a = np.array(literal_eval(a))
 
 
 

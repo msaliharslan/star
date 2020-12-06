@@ -17,9 +17,14 @@ R1 = np.array([0.99998950958252, 0.003296238137409, -0.00291465758346, 0.0012872
 R2 = np.array([0.999997079372406, 0.000338271434885, -0.001731238677166, 0.001662679249421]) # from fisheye2 to pose
 R3 = np.array([0, 1, 0, 0]) # from IMU to pose
 
+T4 = np.array([0.014851336367428, 0.0004623454588, 0.000593442469835]) # from RGB to depth(infrared 1)
+
+R4 = np.array([-0.003368464997038, -0.000677574775182, -0.006368808448315, -0.999973833560944]) # from RGB to depth(infrared 1)
+
 R1 = rot.from_quat(R1).as_matrix()
 R2 = rot.from_quat(R2).as_matrix()
 R3 = rot.from_quat(R3).as_matrix()
+R4 = rot.from_quat(R4).as_matrix()
 
 R1_inv = np.linalg.inv(R1)
 

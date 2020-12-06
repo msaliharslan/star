@@ -17,6 +17,6 @@ Mission 5) COMPLETED
     #1 Find extrinsics between RGB and Fisheye
     
 Mission 6)
-    #1 confirm circular tranformations are identity
+    #1 confirm circular tranformations are identity CHECK
     #2 using extrinsics map depth onto RGB(?)
     #3 using extrinsics map depth-rgb onto fisheye (recreate fisheye with color pixels)

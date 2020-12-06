@@ -1,25 +1,25 @@
 
-*Translation from RGB to Left Fisheye: 
+*Translation from RGB to Left Fisheye:
 [[0.00048051]
  [0.0295915 ]
  [0.00877444]]
-*Rotation from RGB to Left Fisheye: 
+*Rotation from RGB to Left Fisheye:
 [[ 0.99990357 -0.0131452   0.00447831]
  [ 0.012978    0.9992849   0.03551423]
  [-0.00494195 -0.03545269  0.99935914]]
-*Translation from RGB to Right Fisheye: 
+*Translation from RGB to Right Fisheye:
 [[0.06381501]
  [0.03055341]
  [0.00785461]]
-*Rotation from RGB to Right Fisheye: 
+*Rotation from RGB to Right Fisheye:
 [[ 0.99981921 -0.0187401   0.00321755]
  [ 0.0186203   0.99925118  0.03391697]
  [-0.00385075 -0.03385092  0.99941947]]
-*Translation from Right to Left Fisheye: 
+*Translation from Right to Left Fisheye:
 [[-0.06407593]
  [ 0.00016281]
  [ 0.00080194]]
-*Rotation from Right to Left Fisheye: 
+*Rotation from Right to Left Fisheye:
 [[ 0.99998026  0.00576925  0.00249038]
  [-0.00577328  0.99998203  0.00161431]
  [-0.00248102 -0.00162865  0.9999956 ]]
