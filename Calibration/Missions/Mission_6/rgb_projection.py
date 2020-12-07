@@ -82,18 +82,40 @@ fileNamesRgb.sort()
 imgDep = cv2.imread(fileNamesDepth[0], cv2.IMREAD_UNCHANGED)
 imgRgb = cv2.imread(fileNamesRgb[0])
 
-mappedD2C = np.zeros(imgRgb.shape[:2])
-
 shape = imgDep.shape
-for i in range(shape[0]) :
-    for j in range(shape[1]):
-        if(imgDep[i][j] != 0):
-            worldP = np.dot(KDep_inv, (i, j, 1))
-            worldP *= imgDep[i][j] * worldP / worldP[2]
-            if i == shape[0] // 2 and j == shape[1] // 2:
-                print(worldP)
+objp = np.ones((shape[0] * shape[1], 3), np.uint32)
+objp[:, :2] = np.mgrid[0:shape[0], 0:shape[1]].T.reshape(-1, 2)
+objp = objp.T
+worldP = np.dot(KDep_inv, objp)
+worldP = worldP.T
+worldP = worldP.reshape((shape[0], shape[1], 3) )
+imgDep = np.expand_dims(imgDep, axis=2)
+worldP = worldP * imgDep * 1e-3
+
+worldP_prime = np.dot(R4, worldP.reshape(shape[0]*shape[1], 3).T) + np.expand_dims(T4, 1)
+imgP_prime = np.dot(KRgb, worldP_prime)
+imgP_prime /= imgP_prime[2,:]
+imgP_prime = np.array(np.round(imgP_prime), dtype=np.int32)
+
+mappedD2C = np.zeros(imgRgb.shape[:2])
+for i,pt in enumerate(imgP_prime.T) :
+    if(pt[0] < 720 and pt[1] < 1280 and pt[0] >= 0 and pt[1] >= 0):
+        depth = worldP_prime[2, i]
+        if(mappedD2C[pt[0], pt[1]] == 0 or depth < mappedD2C[pt[0], pt[1]]):
+            mappedD2C[pt[0], pt[1]] = depth
 
 
+# mappedD2C = np.expand_dims(mappedD2C, 2)
+# h1, w1 = imgRgb.shape[:2]
+# h2, w2 = mappedD2C.shape[:2]
+
+# #create empty matrix
+# img = np.zeros((max(h1, h2), w1+w2,3), np.uint8)
+
+# #combine 2 images
+# img[:h1, :w1,:3] = imgRgb
+# img[:h2, w1:w1+w2,:3] = mappedD2C
+cv2.imwrite("./temp/"+"generated_depth" +".png", mappedD2C)
 
 
 
