@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 if(os.getcwd().split('/')[-1] != 'star'):
     os.chdir("../../../")
     
-test = False
+test = True
 record = True
 
 # read images
@@ -106,6 +106,9 @@ def undistortFisheyeImages(fisheyeImages, K, D):
 
     return undistortedImages, np.array(P[:,:-1])
 
+fisheyeImages = [cv2.imread("SnapShots/t265_d435i/1_2020-11-03_20:56/leftFisheye/1604426208808", cv2.IMREAD_UNCHANGED)]
+handPickedLeftImage, KL = undistortFisheyeImages(fisheyeImages, K1, D1)
+handPickedLeftImage = handPickedLeftImage[0]
 
 leftUndistorted, KL = undistortFisheyeImages(leftFishImgs, K1, D1)
 rightUndistorted, KR = undistortFisheyeImages(rightFishImgs, K2, D2)
@@ -223,6 +226,9 @@ for i in range(imageCount):
         cv2.cornerSubPix(imageRgb, cornersRgb, (5, 5), (-1, -1), (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001))
         cornersL, cornersR = matchCornerOrder_v2(cornersL, cornersR)
         cornersL, cornersRgb = matchCornerOrder_v2(cornersL, cornersRgb)
+        
+        #fix attempt
+        
         imagePointsLeft.append(cornersL)
         imagePointsRight.append(cornersR)
         imagePointsRgb.append(cornersRgb)
@@ -345,19 +351,19 @@ if(record):
     # 2 rgb -> right
     # 3 right -> left
     file = open("Calibration/Missions/Mission_5/extrinsics.txt", "w")
-    file.write("\n*Translation from RGB to Left Fisheye:\n")
+    file.write("\n*Translation from Left Fisheye to RGB:\n")
     file.write(str(T1))
-    file.write("\n*Rotation from RGB to Left Fisheye:\n")
+    file.write("\n*Rotation from Left Fisheye to RGB:\n")
     file.write(str(R1))
     
-    file.write("\n*Translation from RGB to Right Fisheye:\n")
+    file.write("\n*Translation from Right Fisheye to RGB:\n")
     file.write(str(T2))
-    file.write("\n*Rotation from RGB to Right Fisheye:\n")
+    file.write("\n*Rotation from Right Fisheye to RGB:\n")
     file.write(str(R2))
     
-    file.write("\n*Translation from Right to Left Fisheye:\n")
+    file.write("\n*Translation from Left Fisheye to Right:\n")
     file.write(str(T3))
-    file.write("\n*Rotation from Right to Left Fisheye:\n")
+    file.write("\n*Rotation from Left Fisheye Right:\n")
     file.write(str(R3))
     file.close()
 
