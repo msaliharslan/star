@@ -138,36 +138,69 @@ imgP_left = np.array(np.round(imgP_left), dtype=np.int32)
 # plt.show()
 
 mappedD2C = np.zeros(imgRgb.shape[:2])
+mappedC2D = np.zeros(imgRgb.shape).astype(np.uint8)
+
+
 for i,pt in enumerate(imgP_color.T) :
     pt = [pt[1], pt[0], 1]
+    
+    x_depth = objp[0][i]
+    y_depth = objp[1][i]
+        
+    
     if(pt[0] < 720 and pt[1] < 1280 and pt[0] >= 0 and pt[1] >= 0):
+        
         depth = worldP_color[2, i]
-        if(mappedD2C[pt[0], pt[1]] == 0 or (depth < mappedD2C[pt[0], pt[1]] and depth > 0)):
+        
+        
+        if(imgDep[y_depth, x_depth] > 0 and (mappedD2C[pt[0], pt[1]] == 0 or (depth < mappedD2C[pt[0], pt[1]] and depth > 0 ))):
             mappedD2C[pt[0], pt[1]] = depth
+            mappedC2D[y_depth, x_depth, :] = imgRgb[pt[0], pt[1], :]
+            
+            
             
             
 mappedD2L = np.zeros(imgLeft.shape[:2])
+mappedL2D = np.zeros(imgDep.shape[:2]).astype(np.uint8)
+
 for i,pt in enumerate(imgP_left.T) :
     pt = [pt[1], pt[0], 1]
+    
+    x_depth = objp[0][i]
+    y_depth = objp[1][i]
+    
+    
+    
     if(pt[0] < 1000 and pt[1] < 1000 and pt[0] >= 0 and pt[1] >= 0):
         depth = worldP_left[2, i]
-        if(mappedD2L[pt[0], pt[1]] == 0 or (depth < mappedD2L[pt[0], pt[1]] and depth > 0)):
-            mappedD2L[pt[0], pt[1]] = depth            
+        if(imgDep[y_depth, x_depth] > 0 and (mappedD2L[pt[0], pt[1]] == 0 or (depth < mappedD2L[pt[0], pt[1]] and depth > 0))):
+            mappedD2L[pt[0], pt[1]] = depth     
+            mappedL2D[y_depth, x_depth] = imgLeft[pt[0], pt[1]][0]
             
 
         
-
+    
 mappedD2C = mappedD2C / np.max(mappedD2C) * (2**16-1)
 mappedD2C = (mappedD2C/256).astype(np.uint8) 
 mappedD2C = cv2.applyColorMap(mappedD2C, cv2.COLORMAP_JET)
 cv2.imwrite("./temp/"+"generated_depth_color" +".png", mappedD2C)
 
 
-mappedD2L = mappedD2L / np.max(mappedD2L) * (2**16-1)
-mappedD2L = (mappedD2L/256).astype(np.uint8) 
-mappedD2L = cv2.applyColorMap(mappedD2L, cv2.COLORMAP_JET)
-imgLeftandDepth = cv2.hconcat([imgLeft, mappedD2L])
-cv2.imwrite("./temp/"+"generated_depth_left" +".png", imgLeftandDepth)
+
+cv2.imwrite("./thingsToSubmit/submission1/"+"mappedC2D.png", mappedC2D)
+
+imgDep2 = imgDep / np.max(imgDep) * (2**16-1)
+imgDep2 = (imgDep2/256).astype(np.uint8) 
+imgDep2 = cv2.applyColorMap(imgDep2, cv2.COLORMAP_JET)
+leftUndistorted_leftDepth = cv2.hconcat([imgLeft, mappedD2L])
+cv2.imwrite("./thingsToSubmit/submission1/"+"leftUndistorted_leftDepth" +".png", leftUndistorted_leftDepth)
+
+
+imgDep_2 = imgDep / np.max(imgDep) * (2**16-1)
+imgDep_2 = (imgDep_2/256).astype(np.uint8)
+imgDep_2 = cv2.applyColorMap(imgDep_2, cv2.COLORMAP_JET)
+
+cv2.imshow("deneme", imgDep_2)
 
 
 # surr = 5
