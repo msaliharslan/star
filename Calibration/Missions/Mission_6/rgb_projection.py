@@ -24,6 +24,17 @@ def str_to_array(arr):
     arr = np.array(literal_eval(arr))
     return arr
     
+def normalizeImageAndSave_toTemp(image_, name, colorMap=None):
+    image = np.copy(image_)
+    image = image / np.max(image) * (2**16-1)
+    image = (image/256).astype(np.uint8) 
+    if(colorMap != None):
+        image = cv2.applyColorMap(image, cv2.COLORMAP_JET)
+    cv2.imwrite("./temp/"+ name +".png", image)
+    
+
+
+
 extrinsics_file = open("Calibration/Missions/Mission_5/extrinsics.txt", "r")
 extrinsics_all = extrinsics_file.read()
 extrinsics_file.close()
@@ -73,8 +84,8 @@ T4 = np.array([0.014851336367428, 0.0004623454588, 0.000593442469835]) # from RG
 
 R4 = np.array([-0.003368464997038, -0.000677574775182, -0.006368808448315, -0.999973833560944]) # from RGB to depth(infrared 1)
 R4 = rot.from_quat(R4).as_matrix()
-R4 = np.linalg.inv(R4)
-T4 = np.dot(R4, -T4)
+# R4 = np.linalg.inv(R4)
+# T4 = np.dot(R4, -T4)
 
 KDep = np.array([[634.013671875, 0.0, 635.5408325195312], [0.0, 634.013671875, 351.9051208496094], [0.0, 0.0, 1.0]])
 KDep_inv = np.linalg.inv(KDep)
@@ -150,18 +161,62 @@ for i,pt in enumerate(imgP_color.T) :
     
     if(pt[0] < 720 and pt[1] < 1280 and pt[0] >= 0 and pt[1] >= 0):
         
-        depth = worldP_color[2, i]
+        depth = worldP_color[2, i]*1000
         
         
         if(imgDep[y_depth, x_depth] > 0 and (mappedD2C[pt[0], pt[1]] == 0 or (depth < mappedD2C[pt[0], pt[1]] and depth > 0 ))):
             mappedD2C[pt[0], pt[1]] = depth
             mappedC2D[y_depth, x_depth, :] = imgRgb[pt[0], pt[1], :]
             
+       
+        
+def mapAtoB(worldP_a, imgP_a, img_a,   worldP_b, imgP_b, img_b):
+    
+    A_ImagePointsAndCorresponds = np.zeros((img_a.shape[0], img_a.shape[1], 2)).astype(np.uint16)
+    B_ImagePointsAndCorresponds = np.zeros((img_b.shape[0], img_b.shape[1], 2)).astype(np.uint16)
+    
+    mappedImage = np.zeros((img_b.shape[0], img_b.shape[1], img_a.shape[2])).astype(img_a.dtype)
+    
+    for i,pt in enumerate(imgP_b.T) :
+        pt = [pt[1], pt[0], 1]
+    
+        
+        if(pt[0] < 1000 and pt[1] < 1000 and pt[0] >= 0 and pt[1] >= 0):
+            depth = worldP_b[2, i] * 1000
+                
+            if(depth != 0 and (B_ImagePointsAndCorresponds[pt[0], pt[1]][1] == 0 or B_ImagePointsAndCorresponds[pt[0], pt[1]][1] > depth)):
+                B_ImagePointsAndCorresponds[pt[0], pt[1]] = [i, depth];
+    
+
+    for i,pt in enumerate(imgP_a.T) :
+        pt = [pt[1], pt[0], 1]
+        
+        if(pt[0] < 1000 and pt[1] < 1000 and pt[0] >= 0 and pt[1] >= 0):
+            depth = worldP_a[2, i] * 1000
+                
+            if(depth != 0 and (A_ImagePointsAndCorresponds[pt[0], pt[1]][1] == 0 or A_ImagePointsAndCorresponds[pt[0], pt[1]][1] > depth)):
+                A_ImagePointsAndCorresponds[pt[0], pt[1]] = [i, depth];
+    
+
+    for row in range(B_ImagePointsAndCorresponds.shape[0]):
+        for col in range(B_ImagePointsAndCorresponds.shape[1]):
             
+            row_ = A_ImagePointsAndCorresponds[B_ImagePointsAndCorresponds[row, col][0]][0]
+            col_ = A_ImagePointsAndCorresponds[B_ImagePointsAndCorresponds[row, col][0]][1]
             
-            
-mappedD2L = np.zeros(imgLeft.shape[:2])
+            mappedImage[row, col] = img_a[row_, col_]
+
+    return mappedImage
+
+
+mappedImage = mapAtoB(worldP_left, imgP_left, imgLeft,   worldP_color, imgP_color, imgRgb)
+
+a = input("input la")
+
+mappedD2L = np.zeros(imgLeft.shape[:2]).astype(np.uint16)
 mappedL2D = np.zeros(imgDep.shape[:2]).astype(np.uint8)
+
+leftFisheyeImagePointsAndCorresponds =  np.zeros((imgLeft.shape[0], imgLeft.shape[1], 3)).astype(np.uint16)
 
 for i,pt in enumerate(imgP_left.T) :
     pt = [pt[1], pt[0], 1]
@@ -172,35 +227,28 @@ for i,pt in enumerate(imgP_left.T) :
     
     
     if(pt[0] < 1000 and pt[1] < 1000 and pt[0] >= 0 and pt[1] >= 0):
-        depth = worldP_left[2, i]
-        if(imgDep[y_depth, x_depth] > 0 and (mappedD2L[pt[0], pt[1]] == 0 or (depth < mappedD2L[pt[0], pt[1]] and depth > 0))):
-            mappedD2L[pt[0], pt[1]] = depth     
-            mappedL2D[y_depth, x_depth] = imgLeft[pt[0], pt[1]][0]
+        depth = worldP_left[2, i] * 1000
+        if(mappedD2L[pt[0], pt[1]] == 0 or (depth < mappedD2L[pt[0], pt[1]] and depth > 0)):
+            mappedD2L[pt[0], pt[1]] = depth    
             
+        if(depth != 0 and (leftFisheyeImagePointsAndCorresponds[pt[0], pt[1]][2] == 0 or leftFisheyeImagePointsAndCorresponds[pt[0], pt[1]][2] > depth)):
+            leftFisheyeImagePointsAndCorresponds[pt[0], pt[1]] = [y_depth, x_depth, depth];
+
+for row in range(leftFisheyeImagePointsAndCorresponds.shape[0]):
+    for col in range(leftFisheyeImagePointsAndCorresponds.shape[1]):
+        if(leftFisheyeImagePointsAndCorresponds[row, col][2] != 0):
+            xDepth = leftFisheyeImagePointsAndCorresponds[row, col][1]
+            yDepth = leftFisheyeImagePointsAndCorresponds[row, col][0]
+            mappedL2D[yDepth, xDepth] = np.mean(imgLeft[row, col])
 
         
-    
-mappedD2C = mappedD2C / np.max(mappedD2C) * (2**16-1)
-mappedD2C = (mappedD2C/256).astype(np.uint8) 
-mappedD2C = cv2.applyColorMap(mappedD2C, cv2.COLORMAP_JET)
-cv2.imwrite("./temp/"+"generated_depth_color" +".png", mappedD2C)
+#normalizeImageAndSave_toTemp(mappedD2C, "generated_depth_color", cv2.COLORMAP_JET)    
 
 
 
-cv2.imwrite("./thingsToSubmit/submission1/"+"mappedC2D.png", mappedC2D)
-
-imgDep2 = imgDep / np.max(imgDep) * (2**16-1)
-imgDep2 = (imgDep2/256).astype(np.uint8) 
-imgDep2 = cv2.applyColorMap(imgDep2, cv2.COLORMAP_JET)
-leftUndistorted_leftDepth = cv2.hconcat([imgLeft, mappedD2L])
-cv2.imwrite("./thingsToSubmit/submission1/"+"leftUndistorted_leftDepth" +".png", leftUndistorted_leftDepth)
 
 
-imgDep_2 = imgDep / np.max(imgDep) * (2**16-1)
-imgDep_2 = (imgDep_2/256).astype(np.uint8)
-imgDep_2 = cv2.applyColorMap(imgDep_2, cv2.COLORMAP_JET)
 
-cv2.imshow("deneme", imgDep_2)
 
 
 # surr = 5
