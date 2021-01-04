@@ -13,7 +13,9 @@ import cv2
 import glob
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-
+import threading
+import time
+import math
 
 
 if(os.getcwd().split('/')[-1] != 'star'):
@@ -75,6 +77,9 @@ R_LF2RF = str_to_array(R_LF2RF)
 R_C2LF = np.linalg.inv(R_LF2C)
 T_C2LF = -np.dot(R_C2LF, T_LF2C)
 
+R_C2RF = np.linalg.inv(R_RF2C)
+T_C2RF = -np.dot(R_C2RF, T_RF2C)
+
 # CHECKING
 T = np.dot(R_RF2C, np.dot(R_LF2RF, T_C2LF) + T_LF2RF) + T_RF2C
 R = np.dot(np.dot(R_C2LF, R_LF2RF), R_RF2C)
@@ -95,14 +100,19 @@ folderName = "SnapShots/t265_d435i/1_2020-11-03_20:56"
 fileNamesDepth = glob.glob(folderName + "/depth/*" )
 fileNamesRgb = glob.glob(folderName + "/rgb/*")
 fileNamesLeft = glob.glob(folderName + "/leftFisheye_undistorted/*")
+fileNamesRight = glob.glob(folderName + "/rightFisheye_undistorted/*")
+
 
 fileNamesDepth.sort()
 fileNamesRgb.sort()
 fileNamesLeft.sort()
+fileNamesRight.sort()
 
 imgDep = cv2.imread(fileNamesDepth[1], cv2.IMREAD_UNCHANGED)
-imgRgb = cv2.imread(fileNamesRgb[1])
-imgLeft = cv2.imread(fileNamesLeft[1])
+imgRgb = cv2.imread(fileNamesRgb[1], cv2.IMREAD_UNCHANGED)
+imgLeft = cv2.imread(fileNamesLeft[1], cv2.IMREAD_UNCHANGED)
+imgRight = cv2.imread(fileNamesRight[1] , cv2.IMREAD_UNCHANGED)
+
 
 
 shape = imgDep.shape
@@ -128,7 +138,7 @@ worldP_depth = worldP_depth * imgDep * 1e-3
 
 worldP_color = np.dot(R4, worldP_depth.reshape(shape[0]*shape[1], 3).T) + np.expand_dims(T4, 1)
 worldP_left = np.dot(R_C2LF, worldP_color) + T_C2LF
-
+worldP_right = np.dot(R_C2RF, worldP_color) + T_C2RF
 
 
 imgP_color = np.dot(KRgb, worldP_color)
@@ -138,6 +148,10 @@ imgP_color = np.array(np.round(imgP_color), dtype=np.int32)
 imgP_left = np.dot(KL, worldP_left)
 imgP_left /= imgP_left[2,:]
 imgP_left = np.array(np.round(imgP_left), dtype=np.int32)
+
+imgP_right = np.dot(KR, worldP_right)
+imgP_right /= imgP_right[2,:]
+imgP_right = np.array(np.round(imgP_right), dtype=np.int32)
 
 # fig = plt.figure()
 # ax = Axes3D(fig)
@@ -169,7 +183,6 @@ for i,pt in enumerate(imgP_color.T) :
             mappedC2D[y_depth, x_depth, :] = imgRgb[pt[0], pt[1], :]
             
        
-        
 def mapAtoB(worldP_a, imgP_a, img_a,   worldP_b, imgP_b, img_b):
     
     A_ImagePointsAndCorresponds = np.zeros((img_a.shape[0], img_a.shape[1], 2)).astype(np.uint16)
@@ -209,37 +222,279 @@ def mapAtoB(worldP_a, imgP_a, img_a,   worldP_b, imgP_b, img_b):
     return mappedImage
 
 
-mappedImage = mapAtoB(worldP_left, imgP_left, imgLeft,   worldP_color, imgP_color, imgRgb)
 
-a = input("input la")
 
-mappedD2L = np.zeros(imgLeft.shape[:2]).astype(np.uint16)
-mappedL2D = np.zeros(imgDep.shape[:2]).astype(np.uint8)
+# RGB - LEFT - RIGHT - DEPTH     
 
-leftFisheyeImagePointsAndCorresponds =  np.zeros((imgLeft.shape[0], imgLeft.shape[1], 3)).astype(np.uint16)
 
-for i,pt in enumerate(imgP_left.T) :
-    pt = [pt[1], pt[0], 1]
+def generateRgbPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
     
-    x_depth = objp[0][i]
-    y_depth = objp[1][i]
+    rgbPackageMatrix = np.zeros((imgRgb.shape[0],imgRgb.shape[1], 9)) # r,g,b, fd, depth, fleft, leftIntensity, fright, rightIntensity
     
-    
-    
-    if(pt[0] < 1000 and pt[1] < 1000 and pt[0] >= 0 and pt[1] >= 0):
-        depth = worldP_left[2, i] * 1000
-        if(mappedD2L[pt[0], pt[1]] == 0 or (depth < mappedD2L[pt[0], pt[1]] and depth > 0)):
-            mappedD2L[pt[0], pt[1]] = depth    
+    rgbPackageMatrix[:,:,0:3] = imgRgb
+  
+# frgb, xrgb, yrgb,   fleft, xleft, yleft,  fright, xright, yright    
+  
+    for mapp in mapMatrix:
+        if(mapp[0]):
             
-        if(depth != 0 and (leftFisheyeImagePointsAndCorresponds[pt[0], pt[1]][2] == 0 or leftFisheyeImagePointsAndCorresponds[pt[0], pt[1]][2] > depth)):
-            leftFisheyeImagePointsAndCorresponds[pt[0], pt[1]] = [y_depth, x_depth, depth];
+            leftIntensity = 0
+            rightIntensity = 0
+            
+            if(mapp[4]):
+                leftIntensity = imgLeft[mapp[6], mapp[5]]
+            if(mapp[8]):
+                rightIntensity = imgRight[mapp[10], mapp[9]]
+                
+            rgbPackageMatrix[mapp[2], mapp[1]][3:] = [1, mapp[3], mapp[4], leftIntensity, mapp[8], rightIntensity ]
+        
+    return rgbPackageMatrix
+    
+def visualizeRgbPackageMatrix(rgbPackageMatrix):
+    
+    # normalizeImageAndSave_toTemp
+    
+    # First original rgb image
+    
+    imgRgb = rgbPackageMatrix[:,:,0:3]
+    
+    normalizeImageAndSave_toTemp(imgRgb, "packageRgb_origRgb")
+    
+    # Second corresponding depth image
+    
+    imgDepth = rgbPackageMatrix[:,:,4]
+    
+    normalizeImageAndSave_toTemp(imgDepth, "packageRgb_depth", 1)
+    
+    
+    # Third corresponding left image
+    
+    imgLeft = rgbPackageMatrix[:,:,6]
+    
+    normalizeImageAndSave_toTemp(imgLeft, "packageRgb_left")
+    
+    # Fourth corresponding right image
+    
+    imgRight = rgbPackageMatrix[:, :, 8]
+    
+    normalizeImageAndSave_toTemp(imgRight, "packageRgb_right")
+    
+    
+    
+    
+def generateLeftPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
+    
+    leftPackageMatrix = np.zeros((imgLeft.shape[0],imgLeft.shape[1], 9)) # leftIntensity, fd, depth, frgb, r, g, b, fright, rightIntensity
+    
+    leftPackageMatrix[:,:,0] = imgLeft
+  
+# frgb, xrgb, yrgb,   fleft, xleft, yleft,  fright, xright, yright    
+  
+    for mapp in mapMatrix:
+        if(mapp[4]):
+            
+            r = 0
+            g = 0
+            b = 0
+            leftIntensity = 0
+            rightIntensity = 0
+            
+            if(mapp[0]):
+                r = imgRgb[mapp[2], mapp[1]][0]
+                g = imgRgb[mapp[2], mapp[1]][1]
+                b = imgRgb[mapp[2], mapp[1]][2]
+                
+            if(mapp[8]):
+                rightIntensity = imgRight[mapp[10], mapp[9]]
+                
+            leftPackageMatrix[mapp[6], mapp[5]][1:9] = [1, mapp[7], mapp[0], r, g, b, mapp[8], rightIntensity]
+            
+        
+    return leftPackageMatrix
 
-for row in range(leftFisheyeImagePointsAndCorresponds.shape[0]):
-    for col in range(leftFisheyeImagePointsAndCorresponds.shape[1]):
-        if(leftFisheyeImagePointsAndCorresponds[row, col][2] != 0):
-            xDepth = leftFisheyeImagePointsAndCorresponds[row, col][1]
-            yDepth = leftFisheyeImagePointsAndCorresponds[row, col][0]
-            mappedL2D[yDepth, xDepth] = np.mean(imgLeft[row, col])
+
+def visualizeLeftPackageMatrix(leftPackageMatrix):
+    
+    # normalizeImageAndSave_toTemp
+    
+    # First original left image
+    
+    imgLeft = leftPackageMatrix[:,:,0]
+    
+    normalizeImageAndSave_toTemp(imgLeft, "packageLeft_origLeft")
+    
+    # Second corresponding depth image
+    
+    imgDepth = leftPackageMatrix[:,:,2]
+    
+    normalizeImageAndSave_toTemp(imgDepth, "packageLeft_depth", 1)
+        
+    
+    # Third corresponding right image
+    
+    imgRight = leftPackageMatrix[:, :, 8]
+    
+    normalizeImageAndSave_toTemp(imgRight, "packageLeft_right")
+    
+    # Fourth corresponding rgb image
+    
+    imgRgb = leftPackageMatrix[:,:,4:7]
+    
+    normalizeImageAndSave_toTemp(imgRgb, "packageLeft_rgb")    
+    
+
+
+
+def generateRightPackageMatrix():
+    None
+    
+def visualizeRightPackageMatrix():
+    None
+    
+    
+    
+    
+def generateDepthPackageMatrix():
+    None
+    
+def visualizeDepthPackageMatrix():
+    None
+    
+    
+    
+    
+    
+   
+def generateMapMatrix(worldPs_rgb, imgPs_rgb, rgbShape, worldPs_left, imgPs_left, leftShape, worldPs_right, imgPs_right, rightShape):
+    
+    mapMatrix = np.zeros((worldPs_rgb.shape[1], 12), dtype=np.int32) # frgb, xrgb, yrgb, rgbDepth,  fleft, xleft, yleft, leftDepth  fright, xright, yright, rightDepth
+    
+    rgbImageCorresponds = np.zeros((rgbShape[0], rgbShape[1], 2))-1 # channels are : depth, pointIndex
+    leftImageCorresponds = np.zeros((leftShape[0], leftShape[1], 2))-1 # channels are : depth, pointIndex
+    rightImageCorresponds = np.zeros((rightShape[0], rightShape[1], 2))-1 # channels are : depth, pointIndex
+    
+    for i in range(imgPs_rgb.shape[1]):
+        
+        imgP_rgb = imgPs_rgb[:,i]
+        imgP_left = imgPs_left[:,i]
+        imgP_right = imgPs_right[:,i]
+        
+        depth_rgb = worldPs_rgb[2][i]
+        x_rgb,y_rgb,_ = imgP_rgb
+        if((x_rgb >= 0 and x_rgb < rgbShape[1] ) and (y_rgb >= 0 and y_rgb < rgbShape[0])):
+            if(rgbImageCorresponds[y_rgb,x_rgb][0] == -1 or (rgbImageCorresponds[y_rgb,x_rgb][0] > depth_rgb and depth_rgb != 0)):
+                rgbImageCorresponds[y_rgb,x_rgb] = [depth_rgb*1000, i]
+                   
+        depth_left = worldPs_left[2][i]
+        x_left,y_left,_ = imgP_left
+        if((x_left >= 0 and x_left < leftShape[1] ) and (y_left >= 0 and y_left < leftShape[0])):        
+            if(leftImageCorresponds[y_left,x_left][0] == -1 or (leftImageCorresponds[y_left,x_left][0] > depth_left and depth_left != 0)):
+                leftImageCorresponds[y_left,x_left] = [depth_left*1000, i]
+            
+        depth_right = worldPs_right[2][i]
+        x_right,y_right,_ = imgP_right
+        if((x_right >= 0 and x_right < rightShape[1] ) and (y_right >= 0 and y_right < rightShape[0])):        
+            if(rightImageCorresponds[y_right,x_right][0] == -1 or (rightImageCorresponds[y_right,x_right][0] > depth_right and depth_right != 0)):
+                rightImageCorresponds[y_right,x_right] = [depth_right*1000, i]     
+                
+                
+
+        
+    for i in range(rgbImageCorresponds.shape[0]):
+        for j in range(rgbImageCorresponds.shape[1]):
+            correspond = rgbImageCorresponds[i,j]
+            if(correspond[1] != -1):
+                mapMatrix[ int(correspond[1]) ][0:4] = [1, j, i, correspond[0]]
+                
+    for i in range(leftImageCorresponds.shape[0]):
+        for j in range(leftImageCorresponds.shape[1]):
+            correspond = leftImageCorresponds[i,j]
+            if(correspond[1] != -1):
+                mapMatrix[ int(correspond[1]) ][4:8] = [1, j, i, correspond[0]]
+
+    for i in range(rightImageCorresponds.shape[0]):
+        for j in range(rightImageCorresponds.shape[1]):
+            correspond = rightImageCorresponds[i,j]
+            if(correspond[1] != -1):
+                mapMatrix[ int(correspond[1]) ][8:12] = [1, j, i, correspond[0]]
+        
+    return mapMatrix
+
+
+
+
+def generateRgbViewFromMapMatrix(imgRgb, mapMatrix):
+    
+    viewRgbImage = np.zeros(imgRgb.shape, dtype = imgRgb.dtype)
+    
+    for mapp in mapMatrix:
+        if(mapp[0]):
+            viewRgbImage[mapp[2], mapp[1]] = imgRgb[mapp[2], mapp[1]]
+    
+    return viewRgbImage
+
+def generateLeftViewFromMapMatrix(imgLeft, mapMatrix):
+    
+    viewLeftImage = np.zeros(imgLeft.shape, dtype = imgLeft.dtype)
+    
+    for mapp in mapMatrix:
+        if(mapp[4]):
+            viewLeftImage[mapp[6], mapp[5]] = imgLeft[mapp[6], mapp[5]]
+    
+    return viewLeftImage
+
+
+
+
+
+mapMatrix = generateMapMatrix(worldP_color, imgP_color, imgRgb.shape, worldP_left, imgP_left, imgLeft.shape, worldP_right, imgP_right, imgLeft.shape)
+
+
+visibleRgbImg = generateRgbViewFromMapMatrix(imgRgb, mapMatrix)
+cv2.imshow("visibleRgbImg",visibleRgbImg)
+
+visibleLeftImg = generateLeftViewFromMapMatrix(imgLeft, mapMatrix)
+cv2.imshow("visibleLeftImg",visibleLeftImg)
+
+
+rgbPackageMatrix = generateRgbPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight)
+visualizeRgbPackageMatrix(rgbPackageMatrix)
+
+leftPackageMatrix = generateLeftPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight)
+visualizeLeftPackageMatrix(leftPackageMatrix)
+
+
+# mappedImage = mapAtoB(worldP_left, imgP_left, imgLeft,   worldP_color, imgP_color, imgRgb)
+
+# a = input("input la")
+
+# mappedD2L = np.zeros(imgLeft.shape[:2]).astype(np.uint16)
+# mappedL2D = np.zeros(imgDep.shape[:2]).astype(np.uint8)
+
+# leftFisheyeImagePointsAndCorresponds =  np.zeros((imgLeft.shape[0], imgLeft.shape[1], 3)).astype(np.uint16)
+
+# for i,pt in enumerate(imgP_left.T) :
+#     pt = [pt[1], pt[0], 1]
+    
+#     x_depth = objp[0][i]
+#     y_depth = objp[1][i]
+    
+    
+    
+#     if(pt[0] < 1000 and pt[1] < 1000 and pt[0] >= 0 and pt[1] >= 0):
+#         depth = worldP_left[2, i] * 1000
+#         if(mappedD2L[pt[0], pt[1]] == 0 or (depth < mappedD2L[pt[0], pt[1]] and depth > 0)):
+#             mappedD2L[pt[0], pt[1]] = depth    
+            
+#         if(depth != 0 and (leftFisheyeImagePointsAndCorresponds[pt[0], pt[1]][2] == 0 or leftFisheyeImagePointsAndCorresponds[pt[0], pt[1]][2] > depth)):
+#             leftFisheyeImagePointsAndCorresponds[pt[0], pt[1]] = [y_depth, x_depth, depth];
+
+# for row in range(leftFisheyeImagePointsAndCorresponds.shape[0]):
+#     for col in range(leftFisheyeImagePointsAndCorresponds.shape[1]):
+#         if(leftFisheyeImagePointsAndCorresponds[row, col][2] != 0):
+#             xDepth = leftFisheyeImagePointsAndCorresponds[row, col][1]
+#             yDepth = leftFisheyeImagePointsAndCorresponds[row, col][0]
+#             mappedL2D[yDepth, xDepth] = np.mean(imgLeft[row, col])
 
         
 #normalizeImageAndSave_toTemp(mappedD2C, "generated_depth_color", cv2.COLORMAP_JET)    
