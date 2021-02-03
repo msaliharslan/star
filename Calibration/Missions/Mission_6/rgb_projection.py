@@ -32,7 +32,7 @@ def normalizeImageAndSave_toTemp(image_, name, colorMap=None):
     image = (image/256).astype(np.uint8) 
     if(colorMap != None):
         image = cv2.applyColorMap(image, cv2.COLORMAP_JET)
-    cv2.imwrite("./temp/"+ name +".png", image)
+    cv2.imwrite("./thingsToSubmit/submission3/"+ name +".png", image, [int(cv2.IMWRITE_PNG_COMPRESSION), 9] )
     
 
 
@@ -250,35 +250,41 @@ def generateRgbPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
         
     return rgbPackageMatrix
     
-def visualizeRgbPackageMatrix(rgbPackageMatrix):
-    
-    # normalizeImageAndSave_toTemp
-    
+def visualizeRgbPackageMatrix(rgbPackageMatrix): # r,g,b, fd, depth, fleft, leftIntensity, fright, rightIntensity
+        
     # First original rgb image
     
-    imgRgb = rgbPackageMatrix[:,:,0:3]
+    imgRgb = np.copy(rgbPackageMatrix[:,:,0:3])
+    flagRgb = np.ones((imgRgb.shape[0], imgRgb.shape[1], 1), dtype=imgRgb.dtype)                     
     
-    normalizeImageAndSave_toTemp(imgRgb, "packageRgb_origRgb")
+    normalizeImageAndSave_toTemp(imgRgb, "rgbPackage/packageRgb_rgb")
+    normalizeImageAndSave_toTemp(flagRgb, "rgbPackage/packageRgb_rgbFlag")
     
     # Second corresponding depth image
     
-    imgDepth = rgbPackageMatrix[:,:,4]
+    imgDepth = np.copy(rgbPackageMatrix[:,:,4])
+    flagDepth = np.copy(rgbPackageMatrix[:,:, 3])
     
-    normalizeImageAndSave_toTemp(imgDepth, "packageRgb_depth", 1)
+    normalizeImageAndSave_toTemp(imgDepth, "rgbPackage/packageRgb_depth")
+    normalizeImageAndSave_toTemp(flagDepth, "rgbPackage/packageRgb_depthFlag")
     
     
     # Third corresponding left image
     
     imgLeft = rgbPackageMatrix[:,:,6]
-    
-    normalizeImageAndSave_toTemp(imgLeft, "packageRgb_left")
+    flagLeft = np.copy(rgbPackageMatrix[:,:,5])
+    normalizeImageAndSave_toTemp(imgLeft, "rgbPackage/packageRgb_left")
+    normalizeImageAndSave_toTemp(flagLeft, "rgbPackage/packageRgb_leftFlag")
     
     # Fourth corresponding right image
     
     imgRight = rgbPackageMatrix[:, :, 8]
+    flagRight = np.copy(rgbPackageMatrix[:,:,7])
     
-    normalizeImageAndSave_toTemp(imgRight, "packageRgb_right")
+    normalizeImageAndSave_toTemp(imgRight, "rgbPackage/packageRgb_right")
+    normalizeImageAndSave_toTemp(flagRight, "rgbPackage/packageRgb_rightFlag")
     
+        
     
     
     
@@ -287,16 +293,13 @@ def generateLeftPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
     leftPackageMatrix = np.zeros((imgLeft.shape[0],imgLeft.shape[1], 9)) # leftIntensity, fd, depth, frgb, r, g, b, fright, rightIntensity
     
     leftPackageMatrix[:,:,0] = imgLeft
-  
-# frgb, xrgb, yrgb,   fleft, xleft, yleft,  fright, xright, yright    
-  
+    
     for mapp in mapMatrix:
         if(mapp[4]):
             
             r = 0
             g = 0
             b = 0
-            leftIntensity = 0
             rightIntensity = 0
             
             if(mapp[0]):
@@ -315,52 +318,182 @@ def generateLeftPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
 
 def visualizeLeftPackageMatrix(leftPackageMatrix):
     
-    # normalizeImageAndSave_toTemp
+    # leftIntensity, fd, depth, frgb, r, g, b, fright, rightIntensity
     
-    # First original left image
+    # First original rgb image
     
-    imgLeft = leftPackageMatrix[:,:,0]
+    imgRgb = np.copy(leftPackageMatrix[:,:,4:7])
+    flagRgb = np.copy(leftPackageMatrix[:,:,3])                
     
-    normalizeImageAndSave_toTemp(imgLeft, "packageLeft_origLeft")
+    normalizeImageAndSave_toTemp(imgRgb, "leftPackage/packageLeft_rgb")
+    normalizeImageAndSave_toTemp(flagRgb, "leftPackage/packageLeft_rgbFlag")
     
     # Second corresponding depth image
     
-    imgDepth = leftPackageMatrix[:,:,2]
+    imgDepth = np.copy(leftPackageMatrix[:,:,2])
+    flagDepth = np.copy(leftPackageMatrix[:,:, 1])
     
-    normalizeImageAndSave_toTemp(imgDepth, "packageLeft_depth", 1)
-        
+    normalizeImageAndSave_toTemp(imgDepth, "leftPackage/packageLeft_depth")
+    normalizeImageAndSave_toTemp(flagDepth, "leftPackage/packageLeft_depthFlag")
     
-    # Third corresponding right image
+    
+    # Third corresponding left image
+    
+    imgLeft = leftPackageMatrix[:,:,0]
+    flagLeft = np.ones((imgLeft.shape[0], imgLeft.shape[1], 1), dtype=imgLeft.dtype)                     
+
+    normalizeImageAndSave_toTemp(imgLeft, "leftPackage/packageLeft_left")
+    normalizeImageAndSave_toTemp(flagLeft, "leftPackage/packageLeft_leftFlag")
+    
+    # Fourth corresponding right image
     
     imgRight = leftPackageMatrix[:, :, 8]
+    flagRight = np.copy(leftPackageMatrix[:,:,7])
     
-    normalizeImageAndSave_toTemp(imgRight, "packageLeft_right")
-    
-    # Fourth corresponding rgb image
-    
-    imgRgb = leftPackageMatrix[:,:,4:7]
-    
-    normalizeImageAndSave_toTemp(imgRgb, "packageLeft_rgb")    
+    normalizeImageAndSave_toTemp(imgRight, "leftPackage/packageLeft_right")
+    normalizeImageAndSave_toTemp(flagRight, "leftPackage/packageLeft_rightFlag")
     
 
 
 
-def generateRightPackageMatrix():
-    None
+def generateRightPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
     
-def visualizeRightPackageMatrix():
-    None
+    rightPackageMatrix = np.zeros((imgRight.shape[0],imgRight.shape[1], 9)) # rightIntensity, fd, depth, frgb, r, g, b, fleft, leftIntensity
+    
+    rightPackageMatrix[:,:,0] = imgRight
+  
+  
+    for mapp in mapMatrix:
+        if(mapp[8]):
+            
+            r = 0
+            g = 0
+            b = 0
+            leftIntensity = 0
+            
+            if(mapp[0]):
+                r = imgRgb[mapp[2], mapp[1]][0]
+                g = imgRgb[mapp[2], mapp[1]][1]
+                b = imgRgb[mapp[2], mapp[1]][2]
+                
+            if(mapp[4]):
+                leftIntensity = imgLeft[mapp[6], mapp[5]]
+                
+            rightPackageMatrix[mapp[10], mapp[9]][1:9] = [1, mapp[11], mapp[0], r, g, b, mapp[4], leftIntensity]
+            
+        
+    return rightPackageMatrix
+    
+def visualizeRightPackageMatrix(rightPackageMatrix):
+     # rightIntensity, fd, depth, frgb, r, g, b, fleft, leftIntensity
+    
+    # First original rgb image
+    
+    imgRgb = np.copy(rightPackageMatrix[:,:,4:7])
+    flagRgb = np.copy(rightPackageMatrix[:,:,3])                
+    
+    normalizeImageAndSave_toTemp(imgRgb, "rightPackage/packageRight_rgb")
+    normalizeImageAndSave_toTemp(flagRgb, "rightPackage/packageRight_rgbFlag")
+    
+    # Second corresponding depth image
+    
+    imgDepth = np.copy(rightPackageMatrix[:,:,2])
+    flagDepth = np.copy(rightPackageMatrix[:,:, 1])
+    
+    normalizeImageAndSave_toTemp(imgDepth, "rightPackage/packageRight_depth")
+    normalizeImageAndSave_toTemp(flagDepth, "rightPackage/packageRight_depthFlag")
+    
+    
+    # Third corresponding left image
+    
+    imgLeft = rightPackageMatrix[:,:,8]
+    flagLeft = rightPackageMatrix[:,:,7] 
+
+    normalizeImageAndSave_toTemp(imgLeft, "rightPackage/packageRight_left")
+    normalizeImageAndSave_toTemp(flagLeft, "rightPackage/packageRight_leftFlag")
+    
+    # Fourth corresponding right image
+    
+    imgRight = rightPackageMatrix[:, :, 0]
+    flagRight = np.ones((imgRight.shape[0], imgRight.shape[1], 1), dtype=imgRight.dtype)
+    
+    normalizeImageAndSave_toTemp(imgRight, "rightPackage/packageRight_right")
+    normalizeImageAndSave_toTemp(flagRight, "rightPackage/packageRight_rightFlag")
     
     
     
     
-def generateDepthPackageMatrix():
-    None
+def generateDepthPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight, imgDepth):
+    depthPackageMatrix = np.zeros((imgDepth.shape[0],imgDepth.shape[1], 9))  # depth, frgb, r,g,b, fLeft, leftIntensity, fRight, rightIntensity
+                                                                           
+    depthPackageMatrix[:,:,0] = imgDepth[:,:,0]
+  
+  
+    for i,mapp in enumerate(mapMatrix):
+        
+         
+        r = 0
+        g = 0
+        b = 0
+        leftIntensity = 0
+        rightIntensity = 0
+        
+        if(mapp[0]):
+            r = imgRgb[mapp[2], mapp[1]][0]
+            g = imgRgb[mapp[2], mapp[1]][1]
+            b = imgRgb[mapp[2], mapp[1]][2]
+            
+        if(mapp[4]):
+            leftIntensity = imgLeft[mapp[6], mapp[5]]
+            
+        if(mapp[8]):
+            rightIntensity = imgRight[mapp[10], mapp[9]]    
+            
+        row = i // imgDepth.shape[1]
+        col = i % imgDepth.shape[1]       
+            
+        depthPackageMatrix[row, col][1:9] = [mapp[0], r,g,b, mapp[4], leftIntensity, mapp[8], rightIntensity]
+            
+        
+    return depthPackageMatrix    
+
+
+def visualizeDepthPackageMatrix(depthPackageMatrix):
     
-def visualizeDepthPackageMatrix():
-    None
+    # depth, frgb, r,g,b, fLeft, leftIntensity, fRight, rightIntensity    
+
+    # First original rgb image
+    
+    imgRgb = np.copy(depthPackageMatrix[:,:,2:5])
+    flagRgb = np.copy(depthPackageMatrix[:,:,1])                
+    
+    normalizeImageAndSave_toTemp(imgRgb, "depthPackage/packageDepth_rgb")
+    normalizeImageAndSave_toTemp(flagRgb, "depthPackage/packageDepth_rgbFlag")
+    
+    # Second corresponding depth image
+    
+    imgDepth = np.copy(depthPackageMatrix[:,:,0])
+    flagDepth = imgDepth != 0
+    
+    normalizeImageAndSave_toTemp(imgDepth, "depthPackage/packageDepth_depth")
+    normalizeImageAndSave_toTemp(flagDepth, "depthPackage/packageDepth_depthFlag")
     
     
+    # Third corresponding left image
+    
+    imgLeft = depthPackageMatrix[:,:,6]
+    flagLeft = depthPackageMatrix[:,:,5] 
+
+    normalizeImageAndSave_toTemp(imgLeft, "depthPackage/packageDepth_left")
+    normalizeImageAndSave_toTemp(flagLeft, "depthPackage/packageDepth_leftFlag")
+    
+    # Fourth corresponding right image
+    
+    imgRight = depthPackageMatrix[:, :, 8]
+    flagRight = depthPackageMatrix[:, :, 7]
+    
+    normalizeImageAndSave_toTemp(imgRight, "depthPackage/packageDepth_right")
+    normalizeImageAndSave_toTemp(flagRight, "depthPackage/packageDepth_rightFlag")
     
     
     
@@ -451,10 +584,10 @@ mapMatrix = generateMapMatrix(worldP_color, imgP_color, imgRgb.shape, worldP_lef
 
 
 visibleRgbImg = generateRgbViewFromMapMatrix(imgRgb, mapMatrix)
-cv2.imshow("visibleRgbImg",visibleRgbImg)
+#cv2.imshow("visibleRgbImg",visibleRgbImg)
 
 visibleLeftImg = generateLeftViewFromMapMatrix(imgLeft, mapMatrix)
-cv2.imshow("visibleLeftImg",visibleLeftImg)
+#cv2.imshow("visibleLeftImg",visibleLeftImg)
 
 
 rgbPackageMatrix = generateRgbPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight)
@@ -462,6 +595,12 @@ visualizeRgbPackageMatrix(rgbPackageMatrix)
 
 leftPackageMatrix = generateLeftPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight)
 visualizeLeftPackageMatrix(leftPackageMatrix)
+
+rightPackageMatrix = generateRightPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight)
+visualizeRightPackageMatrix(rightPackageMatrix)
+
+depthPackageMatrix = generateDepthPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight, imgDep)
+visualizeDepthPackageMatrix(depthPackageMatrix)
 
 
 # mappedImage = mapAtoB(worldP_left, imgP_left, imgLeft,   worldP_color, imgP_color, imgRgb)
