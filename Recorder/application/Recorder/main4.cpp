@@ -113,7 +113,7 @@ int main(int argc, char **argv) try {
     command5 += "/depth";
     system(command5.c_str());    
 
-        //init file objects   
+    //init file objects   
     string filesPath = p;
     filesPath += "/../../Records/";
     filesPath += saveFolderName.str();

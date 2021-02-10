@@ -1,0 +1,3 @@
+/home/salih/Documents/realsense-workspace/star/Recorder/Final/CMakeFiles/rebuild_cache.dir
+/home/salih/Documents/realsense-workspace/star/Recorder/Final/CMakeFiles/record.dir
+/home/salih/Documents/realsense-workspace/star/Recorder/Final/CMakeFiles/edit_cache.dir

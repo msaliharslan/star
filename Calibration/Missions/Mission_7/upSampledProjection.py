@@ -16,6 +16,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import threading
 import time
 import math
+from tqdm import tqdm
 
 
 if(os.getcwd().split('/')[-1] != 'star'):
@@ -114,9 +115,9 @@ imgRight = cv2.imread(fileNamesRight[1] , cv2.IMREAD_UNCHANGED)
 
 # Up sample images
     
-u_left = 2
-u_right = 2
-u_rgb = 1
+u_left = 3
+u_right = 3
+u_rgb = 2
 
 imgLeft = cv2.resize(imgLeft, None, fx = u_left, fy = u_left, interpolation =  cv2.INTER_CUBIC )
 imgRight = cv2.resize(imgRight, None, fx = u_right, fy = u_right, interpolation =  cv2.INTER_CUBIC )
@@ -166,14 +167,26 @@ imgP_right = np.array(np.round(imgP_right), dtype=np.int32)
 # RGB - LEFT - RIGHT - DEPTH     
 def downSampleImage(image, downSampleRate):
     
-    newImage = np.zeros((int(image.shape[0]/downSampleRate), int(image.shape[1]/downSampleRate)))
+    if(len(image.shape) == 3 and image.shape[-1] == 3):
+        newImage = np.zeros((int(image.shape[0]/downSampleRate), int(image.shape[1]/downSampleRate), image.shape[2]))
+        for i in range(int(image.shape[0] / downSampleRate)):
+            for j in range(int(image.shape[1] / downSampleRate)):
+                nonZeroCount = np.sum(np.any(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate] != 0, axis=2) )
+                summR = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate, 0])
+                summG = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate, 1])
+                summB = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate, 2])
+                if(nonZeroCount != 0):
+                    newImage[i,j] = np.array( [summR / nonZeroCount, summG / nonZeroCount, summB / nonZeroCount] )
+    
+    else:
+        newImage = np.zeros((int(image.shape[0]/downSampleRate), int(image.shape[1]/downSampleRate)))
 
-    for i in range(int(image.shape[0] / downSampleRate)):
-        for j in range(int(image.shape[1] / downSampleRate)):
-            nonZeroCount = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate] != 0)
-            summ = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate])
-            if(nonZeroCount != 0):
-                newImage[i,j] = summ / nonZeroCount
+        for i in range(int(image.shape[0] / downSampleRate)):
+            for j in range(int(image.shape[1] / downSampleRate)):
+                nonZeroCount = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate] != 0)
+                summ = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate])
+                if(nonZeroCount != 0):
+                    newImage[i,j] = summ / nonZeroCount
     
     return newImage.astype(dtype=image.dtype)
             
@@ -187,7 +200,7 @@ def generateRgbPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
   
 # frgb, xrgb, yrgb,   fleft, xleft, yleft,  fright, xright, yright    
   
-    for mapp in mapMatrix:
+    for mapp in tqdm(mapMatrix):
         if(mapp[0]):
             
             leftIntensity = 0
@@ -209,9 +222,9 @@ def visualizeRgbPackageMatrix(rgbPackageMatrix): # r,g,b, fd, depth, fleft, left
     imgRgb = np.copy(rgbPackageMatrix[:,:,0:3])
     flagRgb = np.ones((imgRgb.shape[0], imgRgb.shape[1], 1), dtype=imgRgb.dtype)     
 
-    imgRgb = cv2.resize(imgRgb, None, fx = 1/u_rgb, fy = 1/u_rgb, interpolation =  cv2.INTER_CUBIC )
-    flagRgb = cv2.resize(flagRgb, None, fx = 1/u_rgb, fy = 1/u_rgb, interpolation =  cv2.INTER_CUBIC )                
-    
+    imgRgb = downSampleImage(imgRgb, u_rgb) # cv2.resize(imgRgb, None, fx = 1/u_rgb, fy = 1/u_rgb, interpolation =  cv2.INTER_CUBIC )
+    flagRgb = downSampleImage(flagRgb, u_rgb) #  cv2.resize(flagRgb, None, fx = 1/u_rgb, fy = 1/u_rgb, interpolation =  cv2.INTER_CUBIC )                
+
     normalizeImageAndSave_toTemp(imgRgb, "rgbPackage/packageRgb_rgb")
     normalizeImageAndSave_toTemp(flagRgb, "rgbPackage/packageRgb_rgbFlag")
     
@@ -220,8 +233,8 @@ def visualizeRgbPackageMatrix(rgbPackageMatrix): # r,g,b, fd, depth, fleft, left
     imgDepth = np.copy(rgbPackageMatrix[:,:,4])
     flagDepth = np.copy(rgbPackageMatrix[:,:, 3])
     
-    imgDepth = cv2.resize(imgDepth, None, fx = 1/u_rgb, fy = 1/u_rgb, interpolation =  cv2.INTER_CUBIC )
-    flagDepth = cv2.resize(flagDepth, None, fx = 1/u_rgb, fy = 1/u_rgb, interpolation =  cv2.INTER_CUBIC )
+    imgDepth = downSampleImage(imgDepth, u_rgb) # cv2.resize(imgDepth, None, fx = 1/u_rgb, fy = 1/u_rgb, interpolation =  cv2.INTER_CUBIC )
+    flagDepth = downSampleImage(flagDepth, u_rgb) # cv2.resize(flagDepth, None, fx = 1/u_rgb, fy = 1/u_rgb, interpolation =  cv2.INTER_CUBIC )
     
         
     normalizeImageAndSave_toTemp(imgDepth, "rgbPackage/packageRgb_depth")
@@ -233,8 +246,8 @@ def visualizeRgbPackageMatrix(rgbPackageMatrix): # r,g,b, fd, depth, fleft, left
     imgLeft = rgbPackageMatrix[:,:,6]
     flagLeft = np.copy(rgbPackageMatrix[:,:,5])
     
-    imageLeft = cv2.resize(imgLeft, None, fx = 1/u_rgb, fy = 1/u_rgb, interpolation =  cv2.INTER_CUBIC )
-    flagLeft = cv2.resize(flagLeft, None, fx = 1/u_rgb, fy = 1/u_rgb, interpolation =  cv2.INTER_CUBIC )
+    imgLeft = downSampleImage(imgLeft, u_rgb) # cv2.resize(imgLeft, None, fx = 1/u_rgb, fy = 1/u_rgb, interpolation =  cv2.INTER_CUBIC )
+    flagLeft = downSampleImage(flagLeft, u_rgb) # cv2.resize(flagLeft, None, fx = 1/u_rgb, fy = 1/u_rgb, interpolation =  cv2.INTER_CUBIC )
 
     
     normalizeImageAndSave_toTemp(imgLeft, "rgbPackage/packageRgb_left")
@@ -245,8 +258,8 @@ def visualizeRgbPackageMatrix(rgbPackageMatrix): # r,g,b, fd, depth, fleft, left
     imgRight = rgbPackageMatrix[:, :, 8]
     flagRight = np.copy(rgbPackageMatrix[:,:,7])
     
-    imgRight = cv2.resize(imgRight, None, fx = 1/u_rgb, fy = 1/u_rgb, interpolation =  cv2.INTER_CUBIC )
-    flagRight = cv2.resize(flagRight, None, fx = 1/u_rgb, fy = 1/u_rgb, interpolation =  cv2.INTER_CUBIC )
+    imgRight = downSampleImage(imgRight, u_rgb) # cv2.resize(imgRight, None, fx = 1/u_rgb, fy = 1/u_rgb, interpolation =  cv2.INTER_CUBIC )
+    flagRight = downSampleImage(flagRight, u_rgb) # cv2.resize(flagRight, None, fx = 1/u_rgb, fy = 1/u_rgb, interpolation =  cv2.INTER_CUBIC )
     
     
     normalizeImageAndSave_toTemp(imgRight, "rgbPackage/packageRgb_right")
@@ -262,7 +275,7 @@ def generateLeftPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
     
     leftPackageMatrix[:,:,0] = imgLeft
     
-    for mapp in mapMatrix:
+    for mapp in tqdm(mapMatrix):
         if(mapp[4]):
             
             r = 0
@@ -293,8 +306,8 @@ def visualizeLeftPackageMatrix(leftPackageMatrix):
     imgRgb = np.copy(leftPackageMatrix[:,:,4:7])
     flagRgb = np.copy(leftPackageMatrix[:,:,3])      
     
-    imgRgb = cv2.resize(imgRgb, None, fx = 1/u_left, fy = 1/u_left, interpolation =  cv2.INTER_CUBIC )
-    flagRgb = cv2.resize(flagRgb, None, fx = 1/u_left, fy = 1/u_left, interpolation =  cv2.INTER_CUBIC )           
+    imgRgb = downSampleImage(imgRgb, u_left) # cv2.resize(imgRgb, None, fx = 1/u_left, fy = 1/u_left, interpolation =  cv2.INTER_CUBIC )
+    flagRgb = downSampleImage(flagRgb, u_left) # cv2.resize(flagRgb, None, fx = 1/u_left, fy = 1/u_left, interpolation =  cv2.INTER_CUBIC )           
         
     
     normalizeImageAndSave_toTemp(imgRgb, "leftPackage/packageLeft_rgb")
@@ -305,8 +318,8 @@ def visualizeLeftPackageMatrix(leftPackageMatrix):
     imgDepth = np.copy(leftPackageMatrix[:,:,2])
     flagDepth = np.copy(leftPackageMatrix[:,:, 1])
     
-    imgDepth = cv2.resize(imgDepth, None, fx = 1/u_left, fy = 1/u_left, interpolation =  cv2.INTER_CUBIC )
-    flagDepth = cv2.resize(flagDepth, None, fx = 1/u_left, fy = 1/u_left, interpolation =  cv2.INTER_CUBIC )             
+    imgDepth = downSampleImage(imgDepth, u_left) # cv2.resize(imgDepth, None, fx = 1/u_left, fy = 1/u_left, interpolation =  cv2.INTER_CUBIC )
+    flagDepth = downSampleImage(flagDepth, u_left) # cv2.resize(flagDepth, None, fx = 1/u_left, fy = 1/u_left, interpolation =  cv2.INTER_CUBIC )             
     
     normalizeImageAndSave_toTemp(imgDepth, "leftPackage/packageLeft_depth")
     normalizeImageAndSave_toTemp(flagDepth, "leftPackage/packageLeft_depthFlag")
@@ -317,8 +330,8 @@ def visualizeLeftPackageMatrix(leftPackageMatrix):
     imgLeft = leftPackageMatrix[:,:,0]
     flagLeft = np.ones((imgLeft.shape[0], imgLeft.shape[1], 1), dtype=imgLeft.dtype)  
     
-    imgLeft = cv2.resize(imgLeft, None, fx = 1/u_left, fy = 1/u_left, interpolation =  cv2.INTER_CUBIC )
-    flagLeft = cv2.resize(flagLeft, None, fx = 1/u_left, fy = 1/u_left, interpolation =  cv2.INTER_CUBIC )   
+    imgLeft = downSampleImage(imgLeft, u_left) # cv2.resize(imgLeft, None, fx = 1/u_left, fy = 1/u_left, interpolation =  cv2.INTER_CUBIC )
+    flagLeft = downSampleImage(flagLeft, u_left) # cv2.resize(flagLeft, None, fx = 1/u_left, fy = 1/u_left, interpolation =  cv2.INTER_CUBIC )   
                    
 
     normalizeImageAndSave_toTemp(imgLeft, "leftPackage/packageLeft_left")
@@ -329,8 +342,8 @@ def visualizeLeftPackageMatrix(leftPackageMatrix):
     imgRight = leftPackageMatrix[:, :, 8]
     flagRight = np.copy(leftPackageMatrix[:,:,7])
     
-    imgRight = cv2.resize(imgRight, None, fx = 1/u_left, fy = 1/u_left, interpolation =  cv2.INTER_CUBIC )
-    flagRight = cv2.resize(flagRight, None, fx = 1/u_left, fy = 1/u_left, interpolation =  cv2.INTER_CUBIC )      
+    imgRight = downSampleImage(imgRight, u_left) # cv2.resize(imgRight, None, fx = 1/u_left, fy = 1/u_left, interpolation =  cv2.INTER_CUBIC )
+    flagRight = downSampleImage(flagRight, u_left) # cv2.resize(flagRight, None, fx = 1/u_left, fy = 1/u_left, interpolation =  cv2.INTER_CUBIC )      
     
     normalizeImageAndSave_toTemp(imgRight, "leftPackage/packageLeft_right")
     normalizeImageAndSave_toTemp(flagRight, "leftPackage/packageLeft_rightFlag")
@@ -345,7 +358,7 @@ def generateRightPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
     rightPackageMatrix[:,:,0] = imgRight
   
   
-    for mapp in mapMatrix:
+    for mapp in tqdm(mapMatrix):
         if(mapp[8]):
             
             r = 0
@@ -374,8 +387,8 @@ def visualizeRightPackageMatrix(rightPackageMatrix):
     imgRgb = np.copy(rightPackageMatrix[:,:,4:7])
     flagRgb = np.copy(rightPackageMatrix[:,:,3])            
 
-    imgRgb = cv2.resize(imgRgb, None, fx = 1/u_right, fy = 1/u_right, interpolation =  cv2.INTER_CUBIC )
-    flagRgb = cv2.resize(flagRgb, None, fx = 1/u_right, fy = 1/u_right, interpolation =  cv2.INTER_CUBIC )          
+    imgRgb = downSampleImage(imgRgb, u_right) # cv2.resize(imgRgb, None, fx = 1/u_right, fy = 1/u_right, interpolation =  cv2.INTER_CUBIC )
+    flagRgb = downSampleImage(flagRgb, u_right) # cv2.resize(flagRgb, None, fx = 1/u_right, fy = 1/u_right, interpolation =  cv2.INTER_CUBIC )          
     
     normalizeImageAndSave_toTemp(imgRgb, "rightPackage/packageRight_rgb")
     normalizeImageAndSave_toTemp(flagRgb, "rightPackage/packageRight_rgbFlag")
@@ -385,8 +398,8 @@ def visualizeRightPackageMatrix(rightPackageMatrix):
     imgDepth = np.copy(rightPackageMatrix[:,:,2])
     flagDepth = np.copy(rightPackageMatrix[:,:, 1])
     
-    imgDepth = cv2.resize(imgDepth, None, fx = 1/u_right, fy = 1/u_right, interpolation =  cv2.INTER_CUBIC )
-    flagDepth = cv2.resize(flagDepth, None, fx = 1/u_right, fy = 1/u_right, interpolation =  cv2.INTER_CUBIC )              
+    imgDepth = downSampleImage(imgDepth, u_right) # cv2.resize(imgDepth, None, fx = 1/u_right, fy = 1/u_right, interpolation =  cv2.INTER_CUBIC )
+    flagDepth = downSampleImage(flagDepth, u_right) # cv2.resize(flagDepth, None, fx = 1/u_right, fy = 1/u_right, interpolation =  cv2.INTER_CUBIC )              
     
     normalizeImageAndSave_toTemp(imgDepth, "rightPackage/packageRight_depth")
     normalizeImageAndSave_toTemp(flagDepth, "rightPackage/packageRight_depthFlag")
@@ -397,8 +410,8 @@ def visualizeRightPackageMatrix(rightPackageMatrix):
     imgLeft = rightPackageMatrix[:,:,8]
     flagLeft = rightPackageMatrix[:,:,7] 
     
-    imgLeft = cv2.resize(imgLeft, None, fx = 1/u_right, fy = 1/u_right, interpolation =  cv2.INTER_CUBIC )
-    flagLeft = cv2.resize(flagLeft, None, fx = 1/u_right, fy = 1/u_right, interpolation =  cv2.INTER_CUBIC )     
+    imgLeft = downSampleImage(imgLeft, u_right) # cv2.resize(imgLeft, None, fx = 1/u_right, fy = 1/u_right, interpolation =  cv2.INTER_CUBIC )
+    flagLeft = downSampleImage(flagLeft, u_right) # cv2.resize(flagLeft, None, fx = 1/u_right, fy = 1/u_right, interpolation =  cv2.INTER_CUBIC )     
 
     normalizeImageAndSave_toTemp(imgLeft, "rightPackage/packageRight_left")
     normalizeImageAndSave_toTemp(flagLeft, "rightPackage/packageRight_leftFlag")
@@ -408,8 +421,8 @@ def visualizeRightPackageMatrix(rightPackageMatrix):
     imgRight = rightPackageMatrix[:, :, 0]
     flagRight = np.ones((imgRight.shape[0], imgRight.shape[1], 1), dtype=imgRight.dtype)
     
-    imgRight = cv2.resize(imgRight, None, fx = 1/u_right, fy = 1/u_right, interpolation =  cv2.INTER_CUBIC )
-    flagRight = cv2.resize(flagRight, None, fx = 1/u_right, fy = 1/u_right, interpolation =  cv2.INTER_CUBIC )         
+    imgRight = downSampleImage(imgRight, u_right) # cv2.resize(imgRight, None, fx = 1/u_right, fy = 1/u_right, interpolation =  cv2.INTER_CUBIC )
+    flagRight = downSampleImage(flagRight, u_right) # cv2.resize(flagRight, None, fx = 1/u_right, fy = 1/u_right, interpolation =  cv2.INTER_CUBIC )         
     
     normalizeImageAndSave_toTemp(imgRight, "rightPackage/packageRight_right")
     normalizeImageAndSave_toTemp(flagRight, "rightPackage/packageRight_rightFlag")
@@ -423,7 +436,7 @@ def generateDepthPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight, imgDepth):
     depthPackageMatrix[:,:,0] = imgDepth[:,:,0]
   
   
-    for i,mapp in enumerate(mapMatrix):
+    for i,mapp in tqdm(enumerate(mapMatrix)):
         
          
         r = 0
@@ -500,7 +513,7 @@ def generateMapMatrix(worldPs_rgb, imgPs_rgb, rgbShape, worldPs_left, imgPs_left
     leftImageCorresponds = np.zeros((leftShape[0], leftShape[1], 2))-1 # channels are : depth, pointIndex
     rightImageCorresponds = np.zeros((rightShape[0], rightShape[1], 2))-1 # channels are : depth, pointIndex
     
-    for i in range(imgPs_rgb.shape[1]):
+    for i in tqdm(range(imgPs_rgb.shape[1])):
         
         imgP_rgb = imgPs_rgb[:,i]
         imgP_left = imgPs_left[:,i]
@@ -552,20 +565,23 @@ def generateMapMatrix(worldPs_rgb, imgPs_rgb, rgbShape, worldPs_left, imgPs_left
 
 
 mapMatrix = generateMapMatrix(worldP_color, imgP_color, imgRgb.shape, worldP_left, imgP_left, imgLeft.shape, worldP_right, imgP_right, imgLeft.shape)
-
+print("Map matrix done")
 
 rgbPackageMatrix = generateRgbPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight)
 visualizeRgbPackageMatrix(rgbPackageMatrix)
+print("RGB done")
 
 leftPackageMatrix = generateLeftPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight)
 visualizeLeftPackageMatrix(leftPackageMatrix)
+print("Left done")
 
 rightPackageMatrix = generateRightPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight)
 visualizeRightPackageMatrix(rightPackageMatrix)
+print("Right done")
 
 depthPackageMatrix = generateDepthPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight, imgDep)
 visualizeDepthPackageMatrix(depthPackageMatrix)
-
+print("Depth done")
 
 
 

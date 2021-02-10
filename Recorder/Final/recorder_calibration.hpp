@@ -1,0 +1,6 @@
+#ifndef RECORDER_CALIBRATION
+#define RECORDER_CALIBRATION
+
+void initCalibration();
+
+#endif // RECORDER_CALIBRATION
