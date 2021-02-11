@@ -45,7 +45,7 @@ void scene_callback_d435(rs2::frame frame) {
             double timeStamp = depth.get_timestamp();
             auto frameNumber = depth.get_frame_number();
 
-            // cout << "Depth frame num: " << frameNumber << endl;
+            cout << "Depth frame num: " << frameNumber << endl;
             stringstream filename;
 
             cv::Mat img0(cv::Size(1280, 720), CV_16U, (void*)depth.get_data(), cv::Mat::AUTO_STEP);
@@ -130,7 +130,7 @@ void scene_callback_t265(rs2::frame frame) {
             // cout << fisheye1.get_frame_timestamp_domain() << endl;
 
             cv::Mat img0(cv::Size(848, 800), CV_8U, (void*)fisheye1.get_data(), cv::Mat::AUTO_STEP);
-            filename << fisheye1_folder + "/left_" << frameNumber << "_" << std::setprecision(13) << timeStamp << ".png";            
+            filename << fisheye1_folder + "/left_" << frameNumber << "_" << std::setprecision(13) << timeStamp << ".png";     
             cv::imwrite(filename.str() , img0);
 
         }
@@ -229,33 +229,34 @@ void initScene(string name) {
     string command2 = command1;
     command2 += "/leftFisheye";
     system(command2.c_str());
-    fisheye1_folder = path + "/leftFisheye";
+    fisheye1_folder = path + saveFolderName.str() + "/leftFisheye";
 
     //create rightFisheye folder
     string command3 = command1;
     command3 += "/rightFisheye";
     system(command3.c_str());
-    fisheye2_folder = path + "/rightFisheye";
+    fisheye2_folder = path + saveFolderName.str() + "/rightFisheye";
 
     //create rgb folder
     string command4 = command1;
     command4 += "/rgb";
     system(command4.c_str());
-    color_folder = path + "/rgb";
+    color_folder = path + saveFolderName.str() +  "/rgb";
 
     //create depth folder
     string command5 = command1;
     command5 += "/depth";
     system(command5.c_str()); 
-    depth_folder = path + "/depth";
+    depth_folder = path + saveFolderName.str() + "/depth";
 
     //init file objects   
     string filesPath = p;
-    filesPath += path;
+    filesPath += "/" + path;
     filesPath += saveFolderName.str();
 
     //init t265_acc.bin 
     t265_acc.open((filesPath + "/t265_acc.bin").c_str(), ios::out | ios::binary);
+    cout << (filesPath + "/t265_acc.bin").c_str() << endl;
 
     //init d435_acc.bin
     d435_acc.open((filesPath + "/d435_acc.bin").c_str(), ios::out | ios::binary);

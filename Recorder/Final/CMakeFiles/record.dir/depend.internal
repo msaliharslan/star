@@ -7,6 +7,7 @@ CMakeFiles/record.dir/recorder.cpp.o
  /home/salih/Documents/realsense-workspace/star/Recorder/Final/recorder_common.hpp
  /home/salih/Documents/realsense-workspace/star/Recorder/Final/recorder_health_check.hpp
  /home/salih/Documents/realsense-workspace/star/Recorder/Final/recorder_scene.hpp
+ /home/salih/Documents/realsense-workspace/star/Recorder/Final/time_syncher.hpp
  /usr/local/include/opencv4/opencv2/./imgproc/segmentation.hpp
  /usr/local/include/opencv4/opencv2/calib3d.hpp
  /usr/local/include/opencv4/opencv2/core.hpp
@@ -332,3 +333,4 @@ CMakeFiles/record.dir/time_syncher.cpp.o
  /home/salih/Documents/realsense-workspace/star/Recorder/Final/recorder_health_check.hpp
  /home/salih/Documents/realsense-workspace/star/Recorder/Final/recorder_scene.hpp
  /home/salih/Documents/realsense-workspace/star/Recorder/Final/time_syncher.cpp
+ /home/salih/Documents/realsense-workspace/star/Recorder/Final/time_syncher.hpp

@@ -6,6 +6,104 @@
 using namespace std;
 namespace fs = std::experimental::filesystem;
 
+int level_index = 0;
+
+void health_check_callback_d435(rs2::frame frame){
+ d435_pipe_mutex.lock();
+
+    if(save_flag) {
+        // Cast the frame to appropriate object type
+        auto fset = frame.as<rs2::frameset>();
+        auto depth = fset.get_depth_frame();
+        auto color = fset.get_color_frame();
+
+        // If casting succeeded and the arrived frame is from depth stream
+        if(depth) {
+            double timeStamp = depth.get_timestamp();
+            auto frameNumber = depth.get_frame_number();
+
+            // cout << "Depth frame num: " << frameNumber << endl;
+            stringstream filename;
+
+            cv::Mat img0(cv::Size(1280, 720), CV_16U, (void*)depth.get_data(), cv::Mat::AUTO_STEP);
+            filename << depth_folder + "/level_" + to_string(level_index) +  "/depth/depth_" << frameNumber << "_" << std::setprecision(13) << timeStamp << ".png";            
+            cv::imwrite(filename.str() , img0);
+        }
+
+        // If casting succeeded and the arrived frame is from color stream
+        if(color) {
+            double timeStamp = color.get_timestamp();
+            auto frameNumber = color.get_frame_number();
+            stringstream filename;
+
+            cv::Mat img0(cv::Size(1280, 720), CV_8UC3, (void*)color.get_data(), cv::Mat::AUTO_STEP);
+            cv::Mat img1;
+            cv::cvtColor(img0, img1, cv::COLOR_BGR2RGB);
+            filename << color_folder + "/level_" + to_string(level_index) + "/rgb/rgb_" << frameNumber << "_" << std::setprecision(13) << timeStamp << ".png";            
+            cv::imwrite(filename.str() , img1);
+        }
+    }
+    else if(synch_flag) {
+        auto depth = frame.as<rs2::frameset>().get_depth_frame();
+        if(depth) {
+            auto d435_frametimestamp = depth.get_frame_metadata(RS2_FRAME_METADATA_TIME_OF_ARRIVAL);
+            toas_d435[toas_d435_index] = d435_frametimestamp;
+            toas_d435_index++;
+        }
+    }
+
+    d435_pipe_mutex.unlock();
+}
+
+void health_check_callback_t265(rs2::frame frame) {
+    t265_pipe_mutex.lock();
+
+    if(save_flag) {
+        // Cast the frame to appropriate object type
+        auto fset = frame.as<rs2::frameset>();
+        auto fisheye1 = fset.get_fisheye_frame(1);
+        auto fisheye2 = fset.get_fisheye_frame(2);
+        auto pose = frame.as<rs2::pose_frame>();
+
+        if (fisheye1)
+        {
+            double timeStamp = fisheye1.get_timestamp();
+            auto frameNumber = fisheye1.get_frame_number();
+            stringstream filename;
+
+            // cout << fisheye1.get_frame_timestamp_domain() << endl;
+
+            cv::Mat img0(cv::Size(848, 800), CV_8U, (void*)fisheye1.get_data(), cv::Mat::AUTO_STEP);
+            filename << fisheye1_folder + "/level_" + to_string(level_index) + "/leftFisheye/left_" << frameNumber << "_" << std::setprecision(13) << timeStamp << ".png";     
+            cv::imwrite(filename.str() , img0);
+
+        }
+
+        if(fisheye2){ 
+
+            double timeStamp = fisheye2.get_timestamp();
+            auto frameNumber = fisheye2.get_frame_number();
+            stringstream filename;
+
+            cv::Mat img0(cv::Size(848, 800), CV_8U, (void*)fisheye2.get_data(), cv::Mat::AUTO_STEP);
+            filename << fisheye2_folder + "/level_" + to_string(level_index) + "/rightFisheye/right_" << frameNumber << "_" << std::setprecision(13) << timeStamp << ".png";            
+            cv::imwrite(filename.str() , img0);              
+        }
+    }
+
+    else if(synch_flag) {
+        auto fisheye = frame.as<rs2::frameset>().get_fisheye_frame();
+        if(fisheye) {
+            auto t265_frametimestamp = fisheye.get_frame_metadata(RS2_FRAME_METADATA_TIME_OF_ARRIVAL);
+            toas_t265[toas_t265_index] = t265_frametimestamp;
+            toas_t265_index++;
+        }
+    }
+
+    t265_pipe_mutex.unlock();
+}
+
+
 void initHealthCheck(int level) {
         //first generate the new recording directory name
     int currentSaveIndex = 0;
@@ -56,44 +154,24 @@ void initHealthCheck(int level) {
         string command2 = commandLevel;
         command2 += "/leftFisheye";
         system(command2.c_str());
-        fisheye1_folder = path + "/leftFisheye";
+        fisheye1_folder = path + saveFolderName.str() ;
 
         //create rightFisheye folder
         string command3 = commandLevel;
         command3 += "/rightFisheye";
         system(command3.c_str());
-        fisheye2_folder = path + "/rightFisheye";
+        fisheye2_folder = path + saveFolderName.str();
 
         //create rgb folder
         string command4 = commandLevel;
         command4 += "/rgb";
         system(command4.c_str());
-        color_folder = path + "/rgb";
+        color_folder = path + saveFolderName.str();
 
         //create depth folder
         string command5 = commandLevel;
         command5 += "/depth";
         system(command5.c_str()); 
-        depth_folder = path + "/depth";
-
-        //init file objects   
-        string filesPath = p;
-        filesPath += path;
-        filesPath += saveFolderName.str();
-
-        //init t265_acc.bin 
-        t265_acc.open((filesPath + "/t265_acc.bin").c_str(), ios::out | ios::binary);
-
-        //init d435_acc.bin
-        d435_acc.open((filesPath + "/d435_acc.bin").c_str(), ios::out | ios::binary);
-
-        //init t265_gyro.bin
-        t265_gyro.open((filesPath + "/t265_gyro.bin").c_str(), ios::out | ios::binary);
-
-        //init d435_acc.bin
-        d435_gyro.open((filesPath + "/d435_gyro.bin").c_str(), ios::out | ios::binary);
-
-        //pose
-        t265_pose.open((filesPath + "/t265_pose.bin").c_str(), ios::out | ios::binary);    
+        depth_folder = path + saveFolderName.str();  
     }
 }

@@ -15,6 +15,7 @@
 #include "recorder_health_check.hpp"
 #include "recorder_scene.hpp"
 #include "recorder_common.hpp"
+#include "time_syncher.hpp"
 
 using namespace rs2;
 using namespace std;
@@ -27,6 +28,12 @@ int main(int argc, char **argv) try {
 
     int type, duration, health_check_level;
     string scene_name;
+    bool synched;
+    context ctx;
+    char input_cmd = '\0';
+
+    pipeline *pipe1;
+    pipeline *pipe2;
 
     po::options_description desc("Allowed options");
     desc.add_options()("help", "produce help message") 
@@ -67,6 +74,15 @@ int main(int argc, char **argv) try {
                 return 0;
             }
             initScene(scene_name);
+            synched = timeSyncher(pipe1, scene_callback_d435, pipe2, scene_callback_t265);
+            cout << "Press s to start recording" << endl;
+            while(input_cmd != 's'){
+                cin >> input_cmd;
+            }
+            save_flag = true;
+            std::this_thread::sleep_for(std::chrono::milliseconds(duration * 1000) );
+            save_flag = false;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100) );
             break;
 
         case 1: // health check
@@ -78,6 +94,18 @@ int main(int argc, char **argv) try {
                 return 0;
             }
             initHealthCheck(health_check_level);
+            synched = timeSyncher(pipe1, health_check_callback_d435, pipe2, health_check_callback_t265);
+            for(level_index = 0; level_index < health_check_level; level_index++) {
+                cout << "Press r when you are ready" << endl;
+                while(input_cmd != 'r'){
+                    cin >> input_cmd;
+                }
+                input_cmd = '\0';
+                save_flag = true;
+                std::this_thread::sleep_for(std::chrono::milliseconds(3000) );
+                save_flag = false;
+                std::this_thread::sleep_for(std::chrono::milliseconds(100) );
+            }
             break;
 
         case 2: // calibration
@@ -89,6 +117,24 @@ int main(int argc, char **argv) try {
             cout << "Unknown type code!!" << endl;
             return 0;
     }
+
+    pipe1->stop();
+    pipe2->stop();
+    cout << "pipes are stopped" << endl;
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100) );
+    delete pipe1; pipe1 = nullptr;
+    delete pipe2; pipe2 = nullptr;
+    cout << "pipes are deleted" << endl;
+    //close the files
+    if(type == 0){
+        t265_acc.close();
+        t265_gyro.close();
+        t265_pose.close();
+        d435_acc.close();
+        d435_gyro.close();
+    }
+    cout << "files are closed" << endl;
 }
 
 catch (const error & e)

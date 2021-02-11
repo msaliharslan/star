@@ -6,6 +6,7 @@ CMakeFiles/record.dir/recorder.cpp.o: recorder_calibration.hpp
 CMakeFiles/record.dir/recorder.cpp.o: recorder_common.hpp
 CMakeFiles/record.dir/recorder.cpp.o: recorder_health_check.hpp
 CMakeFiles/record.dir/recorder.cpp.o: recorder_scene.hpp
+CMakeFiles/record.dir/recorder.cpp.o: time_syncher.hpp
 CMakeFiles/record.dir/recorder.cpp.o: /usr/local/include/opencv4/opencv2/./imgproc/segmentation.hpp
 CMakeFiles/record.dir/recorder.cpp.o: /usr/local/include/opencv4/opencv2/calib3d.hpp
 CMakeFiles/record.dir/recorder.cpp.o: /usr/local/include/opencv4/opencv2/core.hpp
@@ -331,4 +332,5 @@ CMakeFiles/record.dir/time_syncher.cpp.o: recorder_common.hpp
 CMakeFiles/record.dir/time_syncher.cpp.o: recorder_health_check.hpp
 CMakeFiles/record.dir/time_syncher.cpp.o: recorder_scene.hpp
 CMakeFiles/record.dir/time_syncher.cpp.o: time_syncher.cpp
+CMakeFiles/record.dir/time_syncher.cpp.o: time_syncher.hpp
 

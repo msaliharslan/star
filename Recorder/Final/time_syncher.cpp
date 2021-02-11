@@ -1,21 +1,13 @@
-#include <librealsense2/rs.hpp> 
-#include <iostream>
-#include "recorder_calibration.hpp"
-#include "recorder_health_check.hpp"
-#include "recorder_scene.hpp"
-#include "recorder_common.hpp"
-#include <chrono>
-#include <thread>
-#include <mutex>
-#include <experimental/random>
+#include "time_syncher.hpp"
 
 using namespace rs2;
 using namespace std;
 
-bool timeSyncher(pipeline *pipe1, config cfg1, void (*callback1)(frame), pipeline *pipe2, config cfg2, void (*callback2)(frame), bool save) {
-
+bool timeSyncher(pipeline *&pipe1, void (*callback1)(frame), pipeline *&pipe2, void (*callback2)(frame)) {
+    int counter = 0;
     while(true) {
         rs2::context ctx;
+        rs2::config cfg1, cfg2;
         bool D435Connected = false;
         bool T265Connected = false;
         auto devices = ctx.query_devices();
@@ -38,21 +30,21 @@ bool timeSyncher(pipeline *pipe1, config cfg1, void (*callback1)(frame), pipelin
                 devices[i].first<rs2::depth_stereo_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 0); 
                 devices[i].first<rs2::motion_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 0); 
                 
-                cfg2.enable_device(devices[i].get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
-                cfg2.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
-                cfg2.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F);
-                cfg2.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_Z16, 30);
-                cfg2.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_RGB8, 30);
+                cfg1.enable_device(devices[i].get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
+                cfg1.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
+                cfg1.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F);
+                cfg1.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_Z16, 15);
+                cfg1.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_RGB8, 15);
 
             }
             else {
                 T265Connected = true;
-                cfg1.enable_device(devices[i].get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
-                cfg1.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
-                cfg1.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F);
-                cfg1.enable_stream(RS2_STREAM_POSE);
-                cfg1.enable_stream(RS2_STREAM_FISHEYE, 1);
-                cfg1.enable_stream(RS2_STREAM_FISHEYE, 2);
+                cfg2.enable_device(devices[i].get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
+                cfg2.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
+                cfg2.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F);
+                cfg2.enable_stream(RS2_STREAM_POSE);
+                cfg2.enable_stream(RS2_STREAM_FISHEYE, 1);
+                cfg2.enable_stream(RS2_STREAM_FISHEYE, 2);
             }
 
 
@@ -81,7 +73,7 @@ bool timeSyncher(pipeline *pipe1, config cfg1, void (*callback1)(frame), pipelin
             for(int i=0; i < toas_d435_index; i++){
                 for(int j=0; j < toas_t265_index; j++){
                     if( abs(toas_d435[i] - toas_t265[j]) < time_difference_threshold ){
-                        cout << "Cameras are now sycnhed!!!" << endl;
+                        cout << "Cameras are now sycnhed!!! at iteration " << counter << " n = " << n << endl;
                         synch_flag = false;
                         d435_pipe_mutex.unlock();
                         t265_pipe_mutex.unlock();
@@ -89,13 +81,20 @@ bool timeSyncher(pipeline *pipe1, config cfg1, void (*callback1)(frame), pipelin
                     } 
                 }
             }
+            toas_d435_index = 0;
+            toas_t265_index = 0;
             d435_pipe_mutex.unlock();
             t265_pipe_mutex.unlock();
         }
 
+        pipe1->stop();
+        pipe2->stop();
+        cout << "Counter: " << counter << endl;
+        
         delete pipe1; pipe1 = nullptr;
         delete pipe2; pipe2 = nullptr;
 
+        counter++;
         std::this_thread::sleep_for(std::chrono::milliseconds(std::experimental::randint(0, 1000)) );
     }
 
