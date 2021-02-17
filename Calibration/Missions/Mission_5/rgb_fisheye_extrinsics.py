@@ -344,8 +344,6 @@ if(test):
             
                 
         
-            
-        
 if(record):
     # 1 rgb -> left
     # 2 rgb -> right

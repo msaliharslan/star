@@ -6,6 +6,12 @@
 
 #IncludeRegexTransform: 
 
+/home/salih/Documents/realsense-workspace/star/Recorder/Final/recorder_calibration.hpp
+librealsense2/rs.hpp
+-
+recorder_common.hpp
+-
+
 /home/salih/Documents/realsense-workspace/star/Recorder/Final/recorder_common.hpp
 mutex
 -
@@ -13,6 +19,10 @@ iostream
 -
 fstream
 -
+librealsense2/rs.hpp
+-
+
+/home/salih/Documents/realsense-workspace/star/Recorder/Final/recorder_health_check.hpp
 librealsense2/rs.hpp
 -
 
@@ -30,6 +40,32 @@ experimental/filesystem
 librealsense2/rs.hpp
 -
 recorder_common.hpp
+-
+
+/home/salih/Documents/realsense-workspace/star/Recorder/Final/time_syncher.cpp
+time_syncher.hpp
+/home/salih/Documents/realsense-workspace/star/Recorder/Final/time_syncher.hpp
+
+/home/salih/Documents/realsense-workspace/star/Recorder/Final/time_syncher.hpp
+librealsense2/rs.hpp
+-
+iostream
+-
+recorder_calibration.hpp
+/home/salih/Documents/realsense-workspace/star/Recorder/Final/recorder_calibration.hpp
+recorder_health_check.hpp
+/home/salih/Documents/realsense-workspace/star/Recorder/Final/recorder_health_check.hpp
+recorder_scene.hpp
+/home/salih/Documents/realsense-workspace/star/Recorder/Final/recorder_scene.hpp
+recorder_common.hpp
+/home/salih/Documents/realsense-workspace/star/Recorder/Final/recorder_common.hpp
+chrono
+-
+thread
+-
+mutex
+-
+experimental/random
 -
 
 /usr/local/include/opencv4/opencv2/./imgproc/segmentation.hpp

@@ -59,11 +59,10 @@ int main(int argc, char **argv) try {
         case 0: // scene
             if(vm.count("name")) {
                 scene_name = vm["name"].as<string>();
-                cout << scene_name << endl;
             }
             else {
                 cout << "Must enter scene name for scene recording!!" << endl;
-                return 0;
+                return 4;
             }
 
             if(vm.count("duration")) {
@@ -71,7 +70,7 @@ int main(int argc, char **argv) try {
             }
             else {
                 cout << "Must enter duration for scene recording!!" << endl;
-                return 0;
+                return 5;
             }
             initScene(scene_name);
             synched = timeSyncher(pipe1, scene_callback_d435, pipe2, scene_callback_t265);
@@ -111,11 +110,25 @@ int main(int argc, char **argv) try {
         case 2: // calibration
 
             initCalibration();
+            synched = timeSyncher(pipe1, calibration_callback_d435, pipe2, calibration_callback_t265);
+            for (const string & cas : calib_cases){
+                current_case = cas; 
+                cout << "Positon board as " << cas << endl;
+                cout << "Press r when you are ready" << endl;
+                while(input_cmd != 'r'){
+                    cin >> input_cmd;
+                }
+                input_cmd = '\0';
+                save_flag = true;
+                std::this_thread::sleep_for(std::chrono::milliseconds(2000) );
+                save_flag = false;
+                std::this_thread::sleep_for(std::chrono::milliseconds(100) );
+            }           
             break;
 
         default:
             cout << "Unknown type code!!" << endl;
-            return 0;
+            return 6;
     }
 
     pipe1->stop();
@@ -135,6 +148,7 @@ int main(int argc, char **argv) try {
         d435_gyro.close();
     }
     cout << "files are closed" << endl;
+    return 0;
 }
 
 catch (const error & e)

@@ -6,5 +6,5 @@ CXX_FLAGS =  -std=c++17 -pthread   -std=gnu++1z
 
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/hdd/realsense/librealsense -I/home/salih/Documents/realsense-workspace/star/Recorder/application/Recorder/record -isystem /home/salih/anaconda3/include -isystem /home/salih/anaconda3/include/opencv 
+CXX_INCLUDES = -I/hdd/realsense/librealsense -I/home/salih/Documents/realsense-workspace/star/Recorder/application/Recorder/record -isystem /usr/local/include/opencv4 
 

@@ -27,6 +27,9 @@ std::string fisheye2_folder;
 std::string color_folder;
 std::string depth_folder;
 
+unsigned long long initialTimeStamp_d435 = 0;
+unsigned long long initialTimeStamp_t265 = 0;
+
 
 
 void writeVectorToFileBinary(ofstream & file, rs2_vector & vector){
@@ -44,3 +47,8 @@ void writeQuaternionToFileBinary(ofstream & file, rs2_quaternion & quaternion){
     file.write((const char*) &(quaternion.z), sizeof(float));
     file.write((const char*) &(quaternion.w), sizeof(float));        
 }
+
+unsigned long long getFrameNumber(double framePeriod, double initialTime, double currentTime){
+    return (unsigned long long) (currentTime - initialTime) / framePeriod;
+}
+

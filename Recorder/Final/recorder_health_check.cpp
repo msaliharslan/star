@@ -9,7 +9,7 @@ namespace fs = std::experimental::filesystem;
 int level_index = 0;
 
 void health_check_callback_d435(rs2::frame frame){
- d435_pipe_mutex.lock();
+    d435_pipe_mutex.lock();
 
     if(save_flag) {
         // Cast the frame to appropriate object type
@@ -20,12 +20,12 @@ void health_check_callback_d435(rs2::frame frame){
         // If casting succeeded and the arrived frame is from depth stream
         if(depth) {
             double timeStamp = depth.get_timestamp();
-            auto frameNumber = depth.get_frame_number();
+            unsigned long long frameNumber = getFrameNumber(depthFramePeriod, initialTimeStamp_d435, timeStamp);
 
             // cout << "Depth frame num: " << frameNumber << endl;
             stringstream filename;
 
-            cv::Mat img0(cv::Size(1280, 720), CV_16U, (void*)depth.get_data(), cv::Mat::AUTO_STEP);
+            cv::Mat img0(cv::Size(width_depth, height_depth), CV_16U, (void*)depth.get_data(), cv::Mat::AUTO_STEP);
             filename << depth_folder + "/level_" + to_string(level_index) +  "/depth/depth_" << frameNumber << "_" << std::setprecision(13) << timeStamp << ".png";            
             cv::imwrite(filename.str() , img0);
         }
@@ -33,10 +33,10 @@ void health_check_callback_d435(rs2::frame frame){
         // If casting succeeded and the arrived frame is from color stream
         if(color) {
             double timeStamp = color.get_timestamp();
-            auto frameNumber = color.get_frame_number();
+            unsigned long long frameNumber = getFrameNumber(depthFramePeriod, initialTimeStamp_d435, timeStamp);
             stringstream filename;
 
-            cv::Mat img0(cv::Size(1280, 720), CV_8UC3, (void*)color.get_data(), cv::Mat::AUTO_STEP);
+            cv::Mat img0(cv::Size(width_color, height_color), CV_8UC3, (void*)color.get_data(), cv::Mat::AUTO_STEP);
             cv::Mat img1;
             cv::cvtColor(img0, img1, cv::COLOR_BGR2RGB);
             filename << color_folder + "/level_" + to_string(level_index) + "/rgb/rgb_" << frameNumber << "_" << std::setprecision(13) << timeStamp << ".png";            
@@ -68,10 +68,8 @@ void health_check_callback_t265(rs2::frame frame) {
         if (fisheye1)
         {
             double timeStamp = fisheye1.get_timestamp();
-            auto frameNumber = fisheye1.get_frame_number();
+            unsigned long long frameNumber = getFrameNumber(fisheyeFramePeriod, initialTimeStamp_t265, timeStamp);
             stringstream filename;
-
-            // cout << fisheye1.get_frame_timestamp_domain() << endl;
 
             cv::Mat img0(cv::Size(848, 800), CV_8U, (void*)fisheye1.get_data(), cv::Mat::AUTO_STEP);
             filename << fisheye1_folder + "/level_" + to_string(level_index) + "/leftFisheye/left_" << frameNumber << "_" << std::setprecision(13) << timeStamp << ".png";     
@@ -82,7 +80,7 @@ void health_check_callback_t265(rs2::frame frame) {
         if(fisheye2){ 
 
             double timeStamp = fisheye2.get_timestamp();
-            auto frameNumber = fisheye2.get_frame_number();
+            unsigned long long frameNumber = getFrameNumber(fisheyeFramePeriod, initialTimeStamp_t265, timeStamp);
             stringstream filename;
 
             cv::Mat img0(cv::Size(848, 800), CV_8U, (void*)fisheye2.get_data(), cv::Mat::AUTO_STEP);

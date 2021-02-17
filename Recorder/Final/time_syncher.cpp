@@ -26,15 +26,19 @@ bool timeSyncher(pipeline *&pipe1, void (*callback1)(frame), pipeline *&pipe2, v
             if(found <= deviceName.length()) {
                 D435Connected = true;
 
-                devices[i].first<rs2::color_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 0); 
+                devices[i].first<rs2::color_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 0);
+                devices[i].first<rs2::color_sensor>().set_option(RS2_OPTION_AUTO_EXPOSURE_PRIORITY, 0);
+                devices[i].first<rs2::color_sensor>().set_option(RS2_OPTION_ENABLE_AUTO_EXPOSURE, 1);
+              
+                devices[i].first<rs2::depth_stereo_sensor>().set_option(RS2_OPTION_ENABLE_AUTO_EXPOSURE, 1);                
                 devices[i].first<rs2::depth_stereo_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 0); 
                 devices[i].first<rs2::motion_sensor>().set_option(RS2_OPTION_GLOBAL_TIME_ENABLED, 0); 
                 
                 cfg1.enable_device(devices[i].get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
                 cfg1.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
                 cfg1.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F);
-                cfg1.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_Z16, 15);
-                cfg1.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_RGB8, 15);
+                cfg1.enable_stream(RS2_STREAM_DEPTH, width_depth, height_depth, RS2_FORMAT_Z16, 30);
+                cfg1.enable_stream(RS2_STREAM_COLOR, width_color, height_color, RS2_FORMAT_RGB8, 30);
 
             }
             else {
@@ -75,6 +79,8 @@ bool timeSyncher(pipeline *&pipe1, void (*callback1)(frame), pipeline *&pipe2, v
                     if( abs(toas_d435[i] - toas_t265[j]) < time_difference_threshold ){
                         cout << "Cameras are now sycnhed!!! at iteration " << counter << " n = " << n << endl;
                         synch_flag = false;
+                        initialTimeStamp_d435 = toas_d435[i];
+                        initialTimeStamp_t265 = toas_t265[j];
                         d435_pipe_mutex.unlock();
                         t265_pipe_mutex.unlock();
                         return true;
