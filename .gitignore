@@ -2,6 +2,7 @@
 *.csv
 *.bag
 *.html
+*Cache.txt
 /Intel*RealSense*D435I
 /Intel*RealSense*T265
 /Recorder/build
@@ -12,3 +13,9 @@
 /Records/targetRecords.txt
 /Recorder/Records
 /Records/*
+/Health_Check/*
+!/Health_Check/health_check.py
+/Packager/Packages/*
+/Recorder/Final/CMakeFiles/*
+/Recorder/application/Recorder/CMakeFiles/*
+
