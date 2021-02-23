@@ -107,26 +107,26 @@ def downSampleImage(image, downSampleRate):
     
     if(len(image.shape) == 3 and image.shape[-1] == 3):
         newImage = np.zeros((int(image.shape[0]/downSampleRate), int(image.shape[1]/downSampleRate), image.shape[2]))
-        for i in range(int(image.shape[0] / downSampleRate)):
-            for j in range(int(image.shape[1] / downSampleRate)):
-                nonZeroCount = np.sum(np.any(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate] != 0, axis=2) )
-                summR = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate, 0])
-                summG = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate, 1])
-                summB = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate, 2])
-                if(nonZeroCount != 0):
-                    newImage[i,j] = np.array( [summR / nonZeroCount, summG / nonZeroCount, summB / nonZeroCount] )
+        area = np.zeros((int(image.shape[0]/downSampleRate), int(image.shape[1]/downSampleRate)))
+        for i in range(downSampleRate):
+            for j in range(downSampleRate):    
+                newImage += image[j::downSampleRate, i::downSampleRate, :]
+                area += np.sum(image[j::downSampleRate, i::downSampleRate, :], 2) > 0
+        
+        newImage[area>0,:] /= np.expand_dims(area[area>0], 1)
+        return newImage.astype(dtype=image.dtype)
     
     else:
+        image = np.squeeze(image)
         newImage = np.zeros((int(image.shape[0]/downSampleRate), int(image.shape[1]/downSampleRate)))
-
-        for i in range(int(image.shape[0] / downSampleRate)):
-            for j in range(int(image.shape[1] / downSampleRate)):
-                nonZeroCount = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate] != 0)
-                summ = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate])
-                if(nonZeroCount != 0):
-                    newImage[i,j] = summ / nonZeroCount
+        area = np.zeros((int(image.shape[0]/downSampleRate), int(image.shape[1]/downSampleRate)))
+        for i in range(downSampleRate):
+            for j in range(downSampleRate):    
+                newImage += image[j::downSampleRate, i::downSampleRate]
+                area += image[j::downSampleRate, i::downSampleRate] > 0
     
-    return newImage.astype(dtype=image.dtype)
+        newImage[area>0] /= area[area>0]
+        return newImage.astype(dtype=image.dtype)
             
             
 def generateRgbPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
@@ -548,8 +548,8 @@ R_D2C = np.array([-0.003368464997038, -0.000677574775182, -0.006368808448315, -0
 R_D2C = rot.from_quat(R_D2C).as_matrix()
 
 
-# KDep = np.array([[634.013671875, 0.0, 635.5408325195312], [0.0, 634.013671875, 351.9051208496094], [0.0, 0.0, 1.0]])
-KDep = np.array([[420.0340576171875, 0.0, 421.04580154418943], [0.0, 422.67578125, 234.6034138997396], [0.0, 0.0, 1.0]])
+KDep = np.array([[634.013671875, 0.0, 635.5408325195312], [0.0, 634.013671875, 351.9051208496094], [0.0, 0.0, 1.0]]) #1280 x 720
+# KDep = np.array([[420.0340576171875, 0.0, 421.04580154418943], [0.0, 422.67578125, 234.6034138997396], [0.0, 0.0, 1.0]]) # 848 480
 KDep_inv = np.linalg.inv(KDep)
 KRgb = np.array([[611.6753646850586, 0.0, 423.94055938720703], [0.0, 615.7430826822916, 246.8198445638021], [0.0, 0.0, 1.0]]) # 848 x 480
 
@@ -568,8 +568,8 @@ KRight = np.array([[500. ,   0. , 499.5],
                    [  0. , 500. , 499.5],
                    [  0.,    0. ,   1. ]])
 
-u_left = 2
-u_right = 2
+u_left = 3
+u_right = 3
 u_rgb = 4
 
 KLeft*= u_left

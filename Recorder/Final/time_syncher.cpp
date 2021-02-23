@@ -37,8 +37,8 @@ bool timeSyncher(pipeline *&pipe1, void (*callback1)(frame), pipeline *&pipe2, v
                 cfg1.enable_device(devices[i].get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
                 cfg1.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
                 cfg1.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F);
-                cfg1.enable_stream(RS2_STREAM_DEPTH, width_depth, height_depth, RS2_FORMAT_Z16, 30);
-                cfg1.enable_stream(RS2_STREAM_COLOR, width_color, height_color, RS2_FORMAT_RGB8, 30);
+                cfg1.enable_stream(RS2_STREAM_DEPTH, width_depth, height_depth, RS2_FORMAT_Z16, 15);
+                cfg1.enable_stream(RS2_STREAM_COLOR, width_color, height_color, RS2_FORMAT_RGB8, 15);
 
             }
             else {

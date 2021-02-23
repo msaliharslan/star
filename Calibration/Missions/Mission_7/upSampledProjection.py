@@ -115,9 +115,9 @@ imgRight = cv2.imread(fileNamesRight[1] , cv2.IMREAD_UNCHANGED)
 
 # Up sample images
     
-u_left = 3
-u_right = 3
-u_rgb = 2
+u_left = 1
+u_right = 1
+u_rgb = 1
 
 imgLeft = cv2.resize(imgLeft, None, fx = u_left, fy = u_left, interpolation =  cv2.INTER_CUBIC )
 imgRight = cv2.resize(imgRight, None, fx = u_right, fy = u_right, interpolation =  cv2.INTER_CUBIC )
@@ -163,32 +163,54 @@ imgP_right = np.dot(KR, worldP_right)
 imgP_right /= imgP_right[2,:]
 imgP_right = np.array(np.round(imgP_right), dtype=np.int32)
 
-
 # RGB - LEFT - RIGHT - DEPTH     
 def downSampleImage(image, downSampleRate):
     
     if(len(image.shape) == 3 and image.shape[-1] == 3):
         newImage = np.zeros((int(image.shape[0]/downSampleRate), int(image.shape[1]/downSampleRate), image.shape[2]))
-        for i in range(int(image.shape[0] / downSampleRate)):
-            for j in range(int(image.shape[1] / downSampleRate)):
-                nonZeroCount = np.sum(np.any(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate] != 0, axis=2) )
-                summR = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate, 0])
-                summG = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate, 1])
-                summB = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate, 2])
-                if(nonZeroCount != 0):
-                    newImage[i,j] = np.array( [summR / nonZeroCount, summG / nonZeroCount, summB / nonZeroCount] )
+        area = np.zeros((int(image.shape[0]/downSampleRate), int(image.shape[1]/downSampleRate)))
+        for i in range(downSampleRate):
+            for j in range(downSampleRate):    
+                newImage += image[j::downSampleRate, i::downSampleRate, :]
+                area += np.sum(image[j::downSampleRate, i::downSampleRate, :], 2) > 0
+        
+        newImage[area>0,:] /= np.expand_dims(area[area>0], 1)
+        return newImage.astype(dtype=image.dtype)
     
     else:
+        image = np.squeeze(image)
         newImage = np.zeros((int(image.shape[0]/downSampleRate), int(image.shape[1]/downSampleRate)))
-
-        for i in range(int(image.shape[0] / downSampleRate)):
-            for j in range(int(image.shape[1] / downSampleRate)):
-                nonZeroCount = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate] != 0)
-                summ = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate])
-                if(nonZeroCount != 0):
-                    newImage[i,j] = summ / nonZeroCount
+        area = np.zeros((int(image.shape[0]/downSampleRate), int(image.shape[1]/downSampleRate)))
+        for i in range(downSampleRate):
+            for j in range(downSampleRate):    
+                newImage += image[j::downSampleRate, i::downSampleRate]
+                area += image[j::downSampleRate, i::downSampleRate] > 0
     
-    return newImage.astype(dtype=image.dtype)
+        newImage[area>0] /= area[area>0]
+        return newImage.astype(dtype=image.dtype)
+    
+    # if(len(image.shape) == 3 and image.shape[-1] == 3):
+    #     newImage = np.zeros((int(image.shape[0]/downSampleRate), int(image.shape[1]/downSampleRate), image.shape[2]))
+    #     for i in range(int(image.shape[0] / downSampleRate)):
+    #         for j in range(int(image.shape[1] / downSampleRate)):
+    #             nonZeroCount = np.sum(np.any(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate] != 0, axis=2) )
+    #             summR = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate, 0])
+    #             summG = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate, 1])
+    #             summB = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate, 2])
+    #             if(nonZeroCount != 0):
+    #                 newImage[i,j] = np.array( [summR / nonZeroCount, summG / nonZeroCount, summB / nonZeroCount] )
+    
+    # else:
+    #     newImage = np.zeros((int(image.shape[0]/downSampleRate), int(image.shape[1]/downSampleRate)))
+
+    #     for i in range(int(image.shape[0] / downSampleRate)):
+    #         for j in range(int(image.shape[1] / downSampleRate)):
+    #             nonZeroCount = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate] != 0)
+    #             summ = np.sum(image[i*downSampleRate:(i+1)*downSampleRate,j*downSampleRate:(j+1)*downSampleRate])
+    #             if(nonZeroCount != 0):
+    #                 newImage[i,j] = summ / nonZeroCount
+    
+    # return newImage.astype(dtype=image.dtype)
             
             
 
@@ -199,19 +221,46 @@ def generateRgbPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
     rgbPackageMatrix[:,:,0:3] = imgRgb
   
 # frgb, xrgb, yrgb,   fleft, xleft, yleft,  fright, xright, yright    
-  
-    for mapp in tqdm(mapMatrix):
-        if(mapp[0]):
+      
+    frgb = np.zeros(mapMatrix.shape[0])
+    fleft = np.zeros(mapMatrix.shape[0])
+    fright = np.zeros(mapMatrix.shape[0])
+    
+    frgb[mapMatrix[:,0].nonzero()] = 1
+    fleft[mapMatrix[:,4].nonzero()] = 1
+    fright[mapMatrix[:,8].nonzero()] = 1
+    
+    fleft = np.logical_and(frgb, fleft)
+    fright = np.logical_and(frgb, fright)
+    
+    indexRgb = frgb.nonzero()[0]
+    indexLeft = fleft.nonzero()[0]
+    indexRight = fright.nonzero()[0]
+    
+    temp = rgbPackageMatrix[mapMatrix[indexRgb,:][:,2], mapMatrix[indexRgb,:][:,1]]
+    temp[:,3:5] = np.vstack((np.ones(indexRgb.shape), mapMatrix[indexRgb,:][:,3])).T
+    rgbPackageMatrix[mapMatrix[indexRgb,:][:,2], mapMatrix[indexRgb,:][:,1]] = temp
+    
+    temp = rgbPackageMatrix[mapMatrix[indexLeft,:][:,2], mapMatrix[indexLeft,:][:,1]]
+    temp[:,5:7] = np.vstack((np.ones(indexLeft.shape), imgLeft[mapMatrix[indexLeft,:][:,6], mapMatrix[indexLeft,:][:,5]])).T
+    rgbPackageMatrix[mapMatrix[indexLeft,:][:,2], mapMatrix[indexLeft,:][:,1]] = temp
+    
+    temp = rgbPackageMatrix[mapMatrix[indexRight,:][:,2], mapMatrix[indexRight,:][:,1]]
+    temp[:,7:9] = np.vstack((np.ones(indexRight.shape), imgRight[mapMatrix[indexRight,:][:,10], mapMatrix[indexRight,:][:,9]])).T
+    rgbPackageMatrix[mapMatrix[indexRight,:][:,2], mapMatrix[indexRight,:][:,1]] = temp
+
+    # for mapp in tqdm(mapMatrix):
+    #     if(mapp[0]):
             
-            leftIntensity = 0
-            rightIntensity = 0
+    #         leftIntensity = 0
+    #         rightIntensity = 0
             
-            if(mapp[4]):
-                leftIntensity = imgLeft[mapp[6], mapp[5]]
-            if(mapp[8]):
-                rightIntensity = imgRight[mapp[10], mapp[9]]
+    #         if(mapp[4]):
+    #             leftIntensity = imgLeft[mapp[6], mapp[5]]
+    #         if(mapp[8]):
+    #             rightIntensity = imgRight[mapp[10], mapp[9]]
                 
-            rgbPackageMatrix[mapp[2], mapp[1]][3:] = [1, mapp[3], mapp[4], leftIntensity, mapp[8], rightIntensity ]
+    #         rgbPackageMatrix[mapp[2], mapp[1]][3:] = [1, mapp[3], mapp[4], leftIntensity, mapp[8], rightIntensity ]
         
     return rgbPackageMatrix
     
@@ -275,23 +324,53 @@ def generateLeftPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
     
     leftPackageMatrix[:,:,0] = imgLeft
     
-    for mapp in tqdm(mapMatrix):
-        if(mapp[4]):
+    frgb = np.zeros(mapMatrix.shape[0])
+    fleft = np.zeros(mapMatrix.shape[0])
+    fright = np.zeros(mapMatrix.shape[0])
+    
+    frgb[mapMatrix[:,0].nonzero()] = 1
+    fleft[mapMatrix[:,4].nonzero()] = 1
+    fright[mapMatrix[:,8].nonzero()] = 1
+    
+    frgb = np.logical_and(fleft, frgb)
+    fright = np.logical_and(fleft, fright)
+    
+    indexRgb = frgb.nonzero()[0]
+    indexLeft = fleft.nonzero()[0]
+    indexRight = fright.nonzero()[0]
+    
+    # frgb, xrgb, yrgb, rgbDepth,  fleft, xleft, yleft, leftDepth  fright, xright, yright, rightDepth
+    
+    temp = leftPackageMatrix[mapMatrix[indexLeft,:][:,6], mapMatrix[indexLeft,:][:,5]]
+    temp[:,1:3] = np.vstack((np.ones(indexLeft.shape), mapMatrix[indexLeft,:][:,7])).T
+    leftPackageMatrix[mapMatrix[indexLeft,:][:,6], mapMatrix[indexLeft,:][:,5]] = temp
+    
+    temp = leftPackageMatrix[mapMatrix[indexRgb,:][:,6], mapMatrix[indexRgb,:][:,5]]
+    temp[:,3:7] = np.concatenate((np.expand_dims(np.ones(indexRgb.shape), 1), imgRgb[mapMatrix[indexRgb,:][:,2], mapMatrix[indexRgb,:][:,1]]), 1)
+    leftPackageMatrix[mapMatrix[indexRgb,:][:,6], mapMatrix[indexRgb,:][:,5]] = temp
+    
+    temp = leftPackageMatrix[mapMatrix[indexRight,:][:,6], mapMatrix[indexRight,:][:,5]]
+    temp[:,7:9] = np.vstack((np.ones(indexRight.shape), imgRight[mapMatrix[indexRight,:][:,10], mapMatrix[indexRight,:][:,9]])).T
+    leftPackageMatrix[mapMatrix[indexRight,:][:,6], mapMatrix[indexRight,:][:,5]] = temp
+
+    
+    # for mapp in tqdm(mapMatrix):
+    #     if(mapp[4]):
             
-            r = 0
-            g = 0
-            b = 0
-            rightIntensity = 0
+    #         r = 0
+    #         g = 0
+    #         b = 0
+    #         rightIntensity = 0
             
-            if(mapp[0]):
-                r = imgRgb[mapp[2], mapp[1]][0]
-                g = imgRgb[mapp[2], mapp[1]][1]
-                b = imgRgb[mapp[2], mapp[1]][2]
+    #         if(mapp[0]):
+    #             r = imgRgb[mapp[2], mapp[1]][0]
+    #             g = imgRgb[mapp[2], mapp[1]][1]
+    #             b = imgRgb[mapp[2], mapp[1]][2]
                 
-            if(mapp[8]):
-                rightIntensity = imgRight[mapp[10], mapp[9]]
+    #         if(mapp[8]):
+    #             rightIntensity = imgRight[mapp[10], mapp[9]]
                 
-            leftPackageMatrix[mapp[6], mapp[5]][1:9] = [1, mapp[7], mapp[0], r, g, b, mapp[8], rightIntensity]
+    #         leftPackageMatrix[mapp[6], mapp[5]][1:9] = [1, mapp[7], mapp[0], r, g, b, mapp[8], rightIntensity]
             
         
     return leftPackageMatrix
@@ -357,24 +436,53 @@ def generateRightPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
     
     rightPackageMatrix[:,:,0] = imgRight
   
-  
-    for mapp in tqdm(mapMatrix):
-        if(mapp[8]):
+    frgb = np.zeros(mapMatrix.shape[0])
+    fleft = np.zeros(mapMatrix.shape[0])
+    fright = np.zeros(mapMatrix.shape[0])
+    
+    frgb[mapMatrix[:,0].nonzero()] = 1
+    fleft[mapMatrix[:,4].nonzero()] = 1
+    fright[mapMatrix[:,8].nonzero()] = 1
+    
+    frgb = np.logical_and(fright, frgb)
+    fleft = np.logical_and(fright, fleft)
+    
+    indexRgb = frgb.nonzero()[0]
+    indexLeft = fleft.nonzero()[0]
+    indexRight = fright.nonzero()[0]
+    
+    # frgb, xrgb, yrgb, rgbDepth,  fleft, xleft, yleft, leftDepth  fright, xright, yright, rightDepth
+    
+    temp = rightPackageMatrix[mapMatrix[indexRight,:][:,10], mapMatrix[indexRight,:][:,9]]
+    temp[:,1:3] = np.vstack((np.ones(indexRight.shape), mapMatrix[indexRight,:][:,11])).T
+    rightPackageMatrix[mapMatrix[indexRight,:][:,10], mapMatrix[indexRight,:][:,9]] = temp
+    
+    temp = rightPackageMatrix[mapMatrix[indexRgb,:][:,10], mapMatrix[indexRgb,:][:,9]]
+    temp[:,3:7] = np.concatenate((np.expand_dims(np.ones(indexRgb.shape), 1), imgRgb[mapMatrix[indexRgb,:][:,2], mapMatrix[indexRgb,:][:,1]]), 1)
+    rightPackageMatrix[mapMatrix[indexRgb,:][:,10], mapMatrix[indexRgb,:][:,9]] = temp
+    
+    temp = rightPackageMatrix[mapMatrix[indexLeft,:][:,10], mapMatrix[indexLeft,:][:,9]]
+    temp[:,7:9] = np.vstack((np.ones(indexLeft.shape), imgLeft[mapMatrix[indexLeft,:][:,6], mapMatrix[indexLeft,:][:,5]])).T
+    rightPackageMatrix[mapMatrix[indexLeft,:][:,10], mapMatrix[indexLeft,:][:,9]] = temp
+
+    
+    # for mapp in tqdm(mapMatrix):
+    #     if(mapp[8]):
             
-            r = 0
-            g = 0
-            b = 0
-            leftIntensity = 0
+    #         r = 0
+    #         g = 0
+    #         b = 0
+    #         leftIntensity = 0
             
-            if(mapp[0]):
-                r = imgRgb[mapp[2], mapp[1]][0]
-                g = imgRgb[mapp[2], mapp[1]][1]
-                b = imgRgb[mapp[2], mapp[1]][2]
+    #         if(mapp[0]):
+    #             r = imgRgb[mapp[2], mapp[1]][0]
+    #             g = imgRgb[mapp[2], mapp[1]][1]
+    #             b = imgRgb[mapp[2], mapp[1]][2]
                 
-            if(mapp[4]):
-                leftIntensity = imgLeft[mapp[6], mapp[5]]
+    #         if(mapp[4]):
+    #             leftIntensity = imgLeft[mapp[6], mapp[5]]
                 
-            rightPackageMatrix[mapp[10], mapp[9]][1:9] = [1, mapp[11], mapp[0], r, g, b, mapp[4], leftIntensity]
+    #         rightPackageMatrix[mapp[10], mapp[9]][1:9] = [1, mapp[11], mapp[0], r, g, b, mapp[4], leftIntensity]
             
         
     return rightPackageMatrix
@@ -430,36 +538,42 @@ def visualizeRightPackageMatrix(rightPackageMatrix):
     
     
     
-def generateDepthPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight, imgDepth):
-    depthPackageMatrix = np.zeros((imgDepth.shape[0],imgDepth.shape[1], 9))  # depth, frgb, r,g,b, fLeft, leftIntensity, fRight, rightIntensity
+def generateDepthPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight, imgDep):
+    depthPackageMatrix = np.zeros((imgDep.shape[0],imgDep.shape[1], 9))  # depth, frgb, r,g,b, fLeft, leftIntensity, fRight, rightIntensity
                                                                            
-    depthPackageMatrix[:,:,0] = imgDepth[:,:,0]
+    depthPackageMatrix[:,:,0] = imgDep[:,:,0]
+    
+    depthPackageMatrix = depthPackageMatrix.reshape((imgDep.shape[0] * imgDep.shape[1], 9))
   
+
+    depthPackageMatrix[:,1:] = np.concatenate((np.expand_dims(mapMatrix[:,0] ,1), imgRgb[mapMatrix[:,2], mapMatrix[:,1]], np.expand_dims(mapMatrix[:,4], 1), np.expand_dims(imgLeft[mapMatrix[:,6], mapMatrix[:,5]], 1), np.expand_dims(mapMatrix[:,8], 1), np.expand_dims(imgRight[mapMatrix[:,10], mapMatrix[:,9]],1)), 1)  
+    depthPackageMatrix = depthPackageMatrix.reshape((imgDep.shape[0], imgDep.shape[1], 9))
+
   
-    for i,mapp in tqdm(enumerate(mapMatrix)):
+    # for i,mapp in tqdm(enumerate(mapMatrix)):
         
          
-        r = 0
-        g = 0
-        b = 0
-        leftIntensity = 0
-        rightIntensity = 0
+    #     r = 0
+    #     g = 0
+    #     b = 0reshape
+    #     leftIntensity = 0
+    #     rightIntensity = 0
         
-        if(mapp[0]):
-            r = imgRgb[mapp[2], mapp[1]][0]
-            g = imgRgb[mapp[2], mapp[1]][1]
-            b = imgRgb[mapp[2], mapp[1]][2]
+    #     if(mapp[0]):
+    #         r = imgRgb[mapp[2], mapp[1]][0]
+    #         g = imgRgb[mapp[2], mapp[1]][1]
+    #         b = imgRgb[mapp[2], mapp[1]][2]
             
-        if(mapp[4]):
-            leftIntensity = imgLeft[mapp[6], mapp[5]]
+    #     if(mapp[4]):
+    #         leftIntensity = imgLeft[mapp[6], mapp[5]]
             
-        if(mapp[8]):
-            rightIntensity = imgRight[mapp[10], mapp[9]]    
+    #     if(mapp[8]):
+    #         rightIntensity = imgRight[mapp[10], mapp[9]]    
             
-        row = i // imgDepth.shape[1]
-        col = i % imgDepth.shape[1]       
+    #     row = i // imgDepth.shape[1]
+    #     col = i % imgDepth.shape[1]       
             
-        depthPackageMatrix[row, col][1:9] = [mapp[0], r,g,b, mapp[4], leftIntensity, mapp[8], rightIntensity]
+    #     depthPackageMatrix[row, col][1:9] = [mapp[0], r,g,b, mapp[4], leftIntensity, mapp[8], rightIntensity]
             
         
     return depthPackageMatrix    
@@ -506,61 +620,91 @@ def visualizeDepthPackageMatrix(depthPackageMatrix):
     
    
 def generateMapMatrix(worldPs_rgb, imgPs_rgb, rgbShape, worldPs_left, imgPs_left, leftShape, worldPs_right, imgPs_right, rightShape):
+    worldPs_rgb = worldPs_rgb.T
+    worldPs_left = worldPs_left.T
+    worldPs_right = worldPs_right.T
+
+    mapMatrix = np.zeros((worldPs_rgb.shape[0], 12), dtype=np.int32) # frgb, xrgb, yrgb, rgbDepth,  fleft, xleft, yleft, leftDepth  fright, xright, yright, rightDepth
     
-    mapMatrix = np.zeros((worldPs_rgb.shape[1], 12), dtype=np.int32) # frgb, xrgb, yrgb, rgbDepth,  fleft, xleft, yleft, leftDepth  fright, xright, yright, rightDepth
+    flagRgb = np.logical_and(np.logical_and(imgPs_rgb[0,:] >= 0, imgPs_rgb[0,:] < rgbShape[1]), np.logical_and(imgPs_rgb[1,:] >= 0, imgPs_rgb[1,:] < rgbShape[0] ) ) 
+    indexRgb = flagRgb.nonzero()[0]
     
-    rgbImageCorresponds = np.zeros((rgbShape[0], rgbShape[1], 2))-1 # channels are : depth, pointIndex
-    leftImageCorresponds = np.zeros((leftShape[0], leftShape[1], 2))-1 # channels are : depth, pointIndex
-    rightImageCorresponds = np.zeros((rightShape[0], rightShape[1], 2))-1 # channels are : depth, pointIndex
+    flagLeft = np.logical_and(np.logical_and(imgPs_left[0,:] >= 0, imgPs_left[0,:] < leftShape[1]), np.logical_and(imgPs_left[1,:] >= 0, imgPs_left[1,:] < leftShape[0] ) )
+    indexLeft = flagLeft.nonzero()[0]
     
-    for i in tqdm(range(imgPs_rgb.shape[1])):
+    flagRight = np.logical_and(np.logical_and(imgPs_right[0,:] >= 0, imgPs_right[0,:] < rightShape[1]), np.logical_and(imgPs_right[1,:] >= 0, imgPs_right[1,:] < rightShape[0] ) )
+    indexRight = flagRight.nonzero()[0]
+    
+    # sorted indeces for valid points
+    si_wp_rgb = np.argsort(-1 * worldPs_rgb[indexRgb ,2])
+    si_wp_left = np.argsort(-1 * worldPs_left[indexLeft, 2])
+    si_wp_right = np.argsort(-1 * worldPs_right[indexRight, 2])
+    
+    # Flags in map matrix
+    mapMatrix[:,0] = flagRgb
+    mapMatrix[:,4] = flagLeft
+    mapMatrix[:,8] = flagRight
+    
+    # Depths in map matrix
+    mapMatrix[indexRgb[si_wp_rgb],3] = worldPs_rgb[indexRgb[si_wp_rgb], 2] * 1000
+    mapMatrix[indexLeft[si_wp_left],7] = worldPs_left[indexLeft[si_wp_left], 2] * 1000
+    mapMatrix[indexRight[si_wp_right],11] = worldPs_right[indexRight[si_wp_right], 2] * 1000
+    
+    # Coordinates in map matrix
+    mapMatrix[indexRgb[si_wp_rgb], 1:3] = imgPs_rgb[0:2, indexRgb[si_wp_rgb]].T
+    mapMatrix[indexLeft[si_wp_left], 5:7] = imgPs_left[0:2, indexLeft[si_wp_left]].T
+    mapMatrix[indexRight[si_wp_right], 9:11] = imgPs_right[0:2, indexRight[si_wp_right]].T
+    
+    # rgbImageCorresponds = np.zeros((rgbShape[0], rgbShape[1], 2))-1 # channels are : depth, pointIndex
+    # leftImageCorresponds = np.zeros((leftShape[0], leftShape[1], 2))-1 # channels are : depth, pointIndex
+    # rightImageCorresponds = np.zeros((rightShape[0], rightShape[1], 2))-1 # channels are : depth, pointIndex
+    
+    # for i in range(imgPs_rgb.shape[1]):
         
-        imgP_rgb = imgPs_rgb[:,i]
-        imgP_left = imgPs_left[:,i]
-        imgP_right = imgPs_right[:,i]
+    #     imgP_rgb = imgPs_rgb[:,i]
+    #     imgP_left = imgPs_left[:,i]
+    #     imgP_right = imgPs_right[:,i]
         
-        depth_rgb = worldPs_rgb[2][i]
-        x_rgb,y_rgb,_ = imgP_rgb
-        if((x_rgb >= 0 and x_rgb < rgbShape[1] ) and (y_rgb >= 0 and y_rgb < rgbShape[0])):
-            if(rgbImageCorresponds[y_rgb,x_rgb][0] == -1 or (rgbImageCorresponds[y_rgb,x_rgb][0] > depth_rgb and depth_rgb != 0)):
-                rgbImageCorresponds[y_rgb,x_rgb] = [depth_rgb*1000, i]
+    #     depth_rgb = worldPs_rgb[2][i]
+    #     x_rgb,y_rgb,_ = imgP_rgb
+    #     if((x_rgb >= 0 and x_rgb < rgbShape[1] ) and (y_rgb >= 0 and y_rgb < rgbShape[0])):
+    #         if(rgbImageCorresponds[y_rgb,x_rgb][0] == -1 or (rgbImageCorresponds[y_rgb,x_rgb][0] > depth_rgb and depth_rgb != 0)):
+    #             rgbImageCorresponds[y_rgb,x_rgb] = [depth_rgb*1000, i]
                    
-        depth_left = worldPs_left[2][i]
-        x_left,y_left,_ = imgP_left
-        if((x_left >= 0 and x_left < leftShape[1] ) and (y_left >= 0 and y_left < leftShape[0])):        
-            if(leftImageCorresponds[y_left,x_left][0] == -1 or (leftImageCorresponds[y_left,x_left][0] > depth_left and depth_left != 0)):
-                leftImageCorresponds[y_left,x_left] = [depth_left*1000, i]
+    #     depth_left = worldPs_left[2][i]
+    #     x_left,y_left,_ = imgP_left
+    #     if((x_left >= 0 and x_left < leftShape[1] ) and (y_left >= 0 and y_left < leftShape[0])):        
+    #         if(leftImageCorresponds[y_left,x_left][0] == -1 or (leftImageCorresponds[y_left,x_left][0] > depth_left and depth_left != 0)):
+    #             leftImageCorresponds[y_left,x_left] = [depth_left*1000, i]
             
-        depth_right = worldPs_right[2][i]
-        x_right,y_right,_ = imgP_right
-        if((x_right >= 0 and x_right < rightShape[1] ) and (y_right >= 0 and y_right < rightShape[0])):        
-            if(rightImageCorresponds[y_right,x_right][0] == -1 or (rightImageCorresponds[y_right,x_right][0] > depth_right and depth_right != 0)):
-                rightImageCorresponds[y_right,x_right] = [depth_right*1000, i]     
+    #     depth_right = worldPs_right[2][i]
+    #     x_right,y_right,_ = imgP_right
+    #     if((x_right >= 0 and x_right < rightShape[1] ) and (y_right >= 0 and y_right < rightShape[0])):        
+    #         if(rightImageCorresponds[y_right,x_right][0] == -1 or (rightImageCorresponds[y_right,x_right][0] > depth_right and depth_right != 0)):
+    #             rightImageCorresponds[y_right,x_right] = [depth_right*1000, i]     
                 
                 
 
         
-    for i in range(rgbImageCorresponds.shape[0]):
-        for j in range(rgbImageCorresponds.shape[1]):
-            correspond = rgbImageCorresponds[i,j]
-            if(correspond[1] != -1):
-                mapMatrix[ int(correspond[1]) ][0:4] = [1, j, i, correspond[0]]
+    # for i in range(rgbImageCorresponds.shape[0]):
+    #     for j in range(rgbImageCorresponds.shape[1]):
+    #         correspond = rgbImageCorresponds[i,j]
+    #         if(correspond[1] != -1):
+    #             mapMatrix[ int(correspond[1]) ][0:4] = [1, j, i, correspond[0]]
                 
-    for i in range(leftImageCorresponds.shape[0]):
-        for j in range(leftImageCorresponds.shape[1]):
-            correspond = leftImageCorresponds[i,j]
-            if(correspond[1] != -1):
-                mapMatrix[ int(correspond[1]) ][4:8] = [1, j, i, correspond[0]]
+    # for i in range(leftImageCorresponds.shape[0]):
+    #     for j in range(leftImageCorresponds.shape[1]):
+    #         correspond = leftImageCorresponds[i,j]
+    #         if(correspond[1] != -1):
+    #             mapMatrix[ int(correspond[1]) ][4:8] = [1, j, i, correspond[0]]
 
-    for i in range(rightImageCorresponds.shape[0]):
-        for j in range(rightImageCorresponds.shape[1]):
-            correspond = rightImageCorresponds[i,j]
-            if(correspond[1] != -1):
-                mapMatrix[ int(correspond[1]) ][8:12] = [1, j, i, correspond[0]]
+    # for i in range(rightImageCorresponds.shape[0]):
+    #     for j in range(rightImageCorresponds.shape[1]):
+    #         correspond = rightImageCorresponds[i,j]
+    #         if(correspond[1] != -1):
+    #             mapMatrix[ int(correspond[1]) ][8:12] = [1, j, i, correspond[0]]
         
     return mapMatrix
-
-
 
 
 
