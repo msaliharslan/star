@@ -37,20 +37,24 @@ def str_to_array(arr):
 def normalizeImageAndSave_toTemp(image, name):
     
     # Normalisation
-    image = image / np.max(image) * (2**16-1)
-    image = (image/256).astype(np.uint8) 
-    
+    if(len(image.shape) == 3  and image.shape[-1] == 3): # normalise only rgb
+        image = image / np.max(image) * (2**16-1)
+        image = (image/256).astype(np.uint8) 
+    else:
+        image = image / np.max(image) * (2**16-1)
+        image = image.astype(np.uint16)
+
     # numpy save
     # file = open( name +".npy", "wb")
     # np.save(file, image)
     # file.close()
     
     # OpenCV save
-    # cv2.imwrite(name +".png", image, [int(cv2.IMWRITE_PNG_COMPRESSION), 9] )
+    cv2.imwrite(name +".png", image, [int(cv2.IMWRITE_PNG_COMPRESSION), 9] )
     
     # Pillow save
-    toSave = Image.fromarray(image)
-    toSave.save(name +".png")
+    # toSave = Image.fromarray(image)
+    # toSave.save(name +".png")
 
 
 def undistortFisheyeImages(fisheyeImages, K, D):
@@ -171,7 +175,9 @@ def generateRgbPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
     return rgbPackageMatrix
     
 def visualizeRgbPackageMatrix(rgbPackageMatrix, path): # r,g,b, fd, depth, fleft, leftIntensity, fright, rightIntensity
-        
+
+    global u_left, u_right, u_rgb
+    
     # First original rgb image
     
     imgRgb = np.copy(rgbPackageMatrix[:,:,0:3])
@@ -260,6 +266,8 @@ def generateLeftPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
 
 def visualizeLeftPackageMatrix(leftPackageMatrix, path):
     
+    global u_left, u_right, u_rgb
+    
     # leftIntensity, fd, depth, frgb, r, g, b, fright, rightIntensity
     
     # First original rgb image
@@ -346,6 +354,9 @@ def generateRightPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
     return rightPackageMatrix
     
 def visualizeRightPackageMatrix(rightPackageMatrix, path):
+    
+    global u_left, u_right, u_rgb
+    
      # rightIntensity, fd, depth, frgb, r, g, b, fleft, leftIntensity
     
     # First original rgb image
@@ -585,143 +596,151 @@ KRight = np.array([[500. ,   0. , 499.5],
                    [  0. , 500. , 499.5],
                    [  0.,    0. ,   1. ]])
 
-u_left = 3
-u_right = 3
-u_rgb = 4
-
-KLeft*= u_left
-KLeft[2,2] = 1
-KRight *= u_right
-KRight[2,2] = 1
-KRgb *= u_rgb
-KRgb[2,2] = 1
-
-package_list = open("Packager/package_list.txt", "r")
-for line in tqdm(package_list):
-    scene_name, index = line.split(' ')
-    folderName = glob.glob("Records/Scene/" + scene_name + "/*")
-    folderName.sort()
-    folderName = folderName[-int(index)]
+u_left = 1
+u_right = 1
+u_rgb = 1
     
-    try:
-        os.mkdir("Packager/Packages/" + scene_name)
-    except:
-        print("Scene folder exists")
+def main():
     
-    fileNamesRgb = sorted(glob.glob(folderName + "/rgb/*"), key = lambda fileName : fileName.split('_')[-1]) 
-    fileNamesLeft = sorted(glob.glob(folderName + "/leftFisheye/*"), key = lambda fileName : fileName.split('_')[-1] )
-    fileNamesRight = sorted(glob.glob(folderName + "/rightFisheye/*"), key = lambda fileName : fileName.split('_')[-1]) 
-    fileNamesDepth = sorted(glob.glob(folderName + "/depth/*"), key = lambda fileName : fileName.split('_')[-1]) 
+    global KLeft, KRight, KRgb, u_left, u_right, u_rgb
+    u_left = 3
+    u_right = 3
+    u_rgb = 4
     
-    try:
-        os.mkdir("Packager/Packages/" + scene_name + '/' + fileNamesDepth[0].split('/')[3])
-    except:
-        print("Date folder exists")
+    KLeft*= u_left
+    KLeft[2,2] = 1
+    KRight *= u_right
+    KRight[2,2] = 1
+    KRgb *= u_rgb
+    KRgb[2,2] = 1
     
-    rgb_start = 0
-    left_start = 0
-    right_start = 0
-    for depthName in tqdm(fileNamesDepth):
-        depth_timestamp = int(depthName.split(".")[0].split("_")[-1])
-        recording_date = depthName.split('/')[3]
-        frame_num_depth = depthName.split('/')[-1].split('_')[1]
-        path = "Packager/Packages/" + scene_name + '/' + recording_date + '/' + frame_num_depth + '/'
+    package_list = open("Packager/package_list.txt", "r")
+    for line in tqdm(package_list):
+        scene_name, index = line.split(' ')
+        folderName = glob.glob("Records/Scene/" + scene_name + "/*")
+        folderName.sort()
+        folderName = folderName[-int(index)]
         
         try:
-            os.mkdir("Packager/Packages/" + scene_name + '/' + recording_date + '/' + frame_num_depth)
-            os.mkdir(path +  "/rgbPackage")
-            os.mkdir(path +  "/leftPackage")
-            os.mkdir(path +  "/rightPackage")
-            os.mkdir(path +  "/depthPackage")
+            os.mkdir("Packager/Packages/" + scene_name)
         except:
-            print("At least one of the package folder exists")
+            print("Scene folder exists")
         
-        min_diff = 1e20
-        for i in range(rgb_start, len(fileNamesRgb)):
-            rgb_timestamp = int(fileNamesRgb[i].split(".")[0].split("_")[-1])
-            if(abs(rgb_timestamp - depth_timestamp) < min_diff):
-                min_diff = abs(rgb_timestamp - depth_timestamp)
-            else:
-                rgb_start = i
-                break
-
-        min_diff = 1e20
-        for i in range(left_start, len(fileNamesLeft)):
-            left_timestamp = int(fileNamesLeft[i].split(".")[0].split("_")[-1])
-            if(abs(left_timestamp - depth_timestamp) < min_diff):
-                min_diff = abs(left_timestamp - depth_timestamp)
-            else:
-                left_start = i
-                break
-                
-        min_diff = 1e20
-        for i in range(right_start, len(fileNamesRight)):
-            right_timestamp = int(fileNamesRight[i].split(".")[0].split("_")[-1])
-            if(abs(right_timestamp - depth_timestamp) < min_diff):
-                min_diff = abs(right_timestamp - depth_timestamp)
-            else:
-                right_start = i
-                break
+        fileNamesRgb = sorted(glob.glob(folderName + "/rgb/*"), key = lambda fileName : fileName.split('_')[-1]) 
+        fileNamesLeft = sorted(glob.glob(folderName + "/leftFisheye/*"), key = lambda fileName : fileName.split('_')[-1] )
+        fileNamesRight = sorted(glob.glob(folderName + "/rightFisheye/*"), key = lambda fileName : fileName.split('_')[-1]) 
+        fileNamesDepth = sorted(glob.glob(folderName + "/depth/*"), key = lambda fileName : fileName.split('_')[-1]) 
+        
+        try:
+            os.mkdir("Packager/Packages/" + scene_name + '/' + fileNamesDepth[0].split('/')[3])
+        except:
+            print("Date folder exists")
+        
+        rgb_start = 0
+        left_start = 0
+        right_start = 0
+        for depthName in tqdm(fileNamesDepth):
+            depth_timestamp = int(depthName.split(".")[0].split("_")[-1])
+            recording_date = depthName.split('/')[3]
+            frame_num_depth = depthName.split('/')[-1].split('_')[1]
+            path = "Packager/Packages/" + scene_name + '/' + recording_date + '/' + frame_num_depth + '/'
+            
+            try:
+                os.mkdir("Packager/Packages/" + scene_name + '/' + recording_date + '/' + frame_num_depth)
+                os.mkdir(path +  "/rgbPackage")
+                os.mkdir(path +  "/leftPackage")
+                os.mkdir(path +  "/rightPackage")
+                os.mkdir(path +  "/depthPackage")
+            except:
+                print("At least one of the package folder exists")
+            
+            min_diff = 1e20
+            for i in range(rgb_start, len(fileNamesRgb)):
+                rgb_timestamp = int(fileNamesRgb[i].split(".")[0].split("_")[-1])
+                if(abs(rgb_timestamp - depth_timestamp) < min_diff):
+                    min_diff = abs(rgb_timestamp - depth_timestamp)
+                else:
+                    rgb_start = i
+                    break
     
-        img_depth = cv2.imread(depthName, cv2.IMREAD_UNCHANGED)
-        img_rgb = cv2.imread(fileNamesRgb[rgb_start - 1], cv2.IMREAD_UNCHANGED)
-        img_left = cv2.imread(fileNamesLeft[left_start - 1], cv2.IMREAD_UNCHANGED)
-        img_right = cv2.imread(fileNamesRight[right_start - 1], cv2.IMREAD_UNCHANGED)
+            min_diff = 1e20
+            for i in range(left_start, len(fileNamesLeft)):
+                left_timestamp = int(fileNamesLeft[i].split(".")[0].split("_")[-1])
+                if(abs(left_timestamp - depth_timestamp) < min_diff):
+                    min_diff = abs(left_timestamp - depth_timestamp)
+                else:
+                    left_start = i
+                    break
+                    
+            min_diff = 1e20
+            for i in range(right_start, len(fileNamesRight)):
+                right_timestamp = int(fileNamesRight[i].split(".")[0].split("_")[-1])
+                if(abs(right_timestamp - depth_timestamp) < min_diff):
+                    min_diff = abs(right_timestamp - depth_timestamp)
+                else:
+                    right_start = i
+                    break
         
-        # Undistort
-        img_left, _ = undistortFisheyeImages([img_left], KL, DLeft)
-        img_right, _ = undistortFisheyeImages([img_right], KR, DRight)
+            img_depth = cv2.imread(depthName, cv2.IMREAD_UNCHANGED)
+            img_rgb = cv2.imread(fileNamesRgb[rgb_start - 1], cv2.IMREAD_UNCHANGED)
+            img_left = cv2.imread(fileNamesLeft[left_start - 1], cv2.IMREAD_UNCHANGED)
+            img_right = cv2.imread(fileNamesRight[right_start - 1], cv2.IMREAD_UNCHANGED)
+            
+            # Undistort
+            img_left, _ = undistortFisheyeImages([img_left], KL, DLeft)
+            img_right, _ = undistortFisheyeImages([img_right], KR, DRight)
+            
+            
+            img_left = cv2.resize(img_left[0], None, fx = u_left, fy = u_left, interpolation =  cv2.INTER_CUBIC )
+            img_right = cv2.resize(img_right[0], None, fx = u_right, fy = u_right, interpolation =  cv2.INTER_CUBIC )
+            img_rgb = cv2.resize(img_rgb, None, fx = u_rgb, fy = u_rgb, interpolation =  cv2.INTER_CUBIC )
         
+            shape = img_depth.shape
+            objp = np.ones((shape[0] * shape[1], 3), np.uint32)
+            objp[:, :2] = np.mgrid[ 0:shape[1],0:shape[0]].T.reshape(-1, 2)
+            objp = objp.T
+            worldP_depth = np.dot(KDep_inv, objp)
+            worldP_depth = worldP_depth.T
+            worldP_depth = worldP_depth.reshape((shape[0], shape[1], 3) )
+            img_depth = np.expand_dims(img_depth, axis=2)
+            worldP_depth = worldP_depth * img_depth * 1e-3
+            
+            worldP_color = np.dot(R_D2C, worldP_depth.reshape(shape[0]*shape[1], 3).T) + np.expand_dims(T_D2C, 1)
+            worldP_left = np.dot(R_C2LF, worldP_color) + T_C2LF
+            worldP_right = np.dot(R_C2RF, worldP_color) + T_C2RF
+            
+            
+            imgP_color = np.dot(KRgb, worldP_color)
+            imgP_color /= imgP_color[2,:]
+            imgP_color = np.array(np.round(imgP_color), dtype=np.int32)
+            
+            imgP_left = np.dot(KLeft, worldP_left)
+            imgP_left /= imgP_left[2,:]
+            imgP_left = np.array(np.round(imgP_left), dtype=np.int32)
+            
+            imgP_right = np.dot(KRight, worldP_right)
+            imgP_right /= imgP_right[2,:]
+            imgP_right = np.array(np.round(imgP_right), dtype=np.int32)
         
-        img_left = cv2.resize(img_left[0], None, fx = u_left, fy = u_left, interpolation =  cv2.INTER_CUBIC )
-        img_right = cv2.resize(img_right[0], None, fx = u_right, fy = u_right, interpolation =  cv2.INTER_CUBIC )
-        img_rgb = cv2.resize(img_rgb, None, fx = u_rgb, fy = u_rgb, interpolation =  cv2.INTER_CUBIC )
+            mapMatrix = generateMapMatrix(worldP_color, imgP_color, img_rgb.shape, worldP_left, imgP_left, img_left.shape, worldP_right, imgP_right, img_right.shape)
+            
+            rgbPackageMatrix = generateRgbPackageMatrix(mapMatrix, img_rgb, img_left, img_right)
+            visualizeRgbPackageMatrix(rgbPackageMatrix, path )
+            
+            leftPackageMatrix = generateLeftPackageMatrix(mapMatrix, img_rgb, img_left, img_right)
+            visualizeLeftPackageMatrix(leftPackageMatrix, path)
+        
+            rightPackageMatrix = generateRightPackageMatrix(mapMatrix, img_rgb, img_left, img_right)
+            visualizeRightPackageMatrix(rightPackageMatrix, path)
+        
+            depthPackageMatrix = generateDepthPackageMatrix(mapMatrix, img_rgb, img_left, img_right, img_depth)
+            visualizeDepthPackageMatrix(depthPackageMatrix, path)
     
-        shape = img_depth.shape
-        objp = np.ones((shape[0] * shape[1], 3), np.uint32)
-        objp[:, :2] = np.mgrid[ 0:shape[1],0:shape[0]].T.reshape(-1, 2)
-        objp = objp.T
-        worldP_depth = np.dot(KDep_inv, objp)
-        worldP_depth = worldP_depth.T
-        worldP_depth = worldP_depth.reshape((shape[0], shape[1], 3) )
-        img_depth = np.expand_dims(img_depth, axis=2)
-        worldP_depth = worldP_depth * img_depth * 1e-3
-        
-        worldP_color = np.dot(R_D2C, worldP_depth.reshape(shape[0]*shape[1], 3).T) + np.expand_dims(T_D2C, 1)
-        worldP_left = np.dot(R_C2LF, worldP_color) + T_C2LF
-        worldP_right = np.dot(R_C2RF, worldP_color) + T_C2RF
-        
-        
-        imgP_color = np.dot(KRgb, worldP_color)
-        imgP_color /= imgP_color[2,:]
-        imgP_color = np.array(np.round(imgP_color), dtype=np.int32)
-        
-        imgP_left = np.dot(KLeft, worldP_left)
-        imgP_left /= imgP_left[2,:]
-        imgP_left = np.array(np.round(imgP_left), dtype=np.int32)
-        
-        imgP_right = np.dot(KRight, worldP_right)
-        imgP_right /= imgP_right[2,:]
-        imgP_right = np.array(np.round(imgP_right), dtype=np.int32)
     
-        mapMatrix = generateMapMatrix(worldP_color, imgP_color, img_rgb.shape, worldP_left, imgP_left, img_left.shape, worldP_right, imgP_right, img_right.shape)
-        
-        rgbPackageMatrix = generateRgbPackageMatrix(mapMatrix, img_rgb, img_left, img_right)
-        visualizeRgbPackageMatrix(rgbPackageMatrix, path )
-        
-        leftPackageMatrix = generateLeftPackageMatrix(mapMatrix, img_rgb, img_left, img_right)
-        visualizeLeftPackageMatrix(leftPackageMatrix, path)
-    
-        rightPackageMatrix = generateRightPackageMatrix(mapMatrix, img_rgb, img_left, img_right)
-        visualizeRightPackageMatrix(rightPackageMatrix, path)
-    
-        depthPackageMatrix = generateDepthPackageMatrix(mapMatrix, img_rgb, img_left, img_right, img_depth)
-        visualizeDepthPackageMatrix(depthPackageMatrix, path)
+    package_list.close()
 
-
-package_list.close()
-
-
+if __name__ == "__main__":
+    main()
 
 
 

@@ -25,20 +25,23 @@ def str_to_array(arr):
 def normalizeImageAndSave_toTemp(image, name):
     
     # Normalisation
-    image = image / np.max(image) * (2**16-1)
-    image = (image/256).astype(np.uint8) 
-    
+    if(len(image.shape) == 3  and image.shape[-1] == 3): # normalise only rgb
+        image = image / np.max(image) * (2**16-1)
+        image = (image/256).astype(np.uint8) 
+    else:
+        image = image / np.max(image) * (2**16-1)
+        image = image.astype(np.uint16)
     # numpy save
     # file = open("./thingsToSubmit/submission4/"+ name +".npy", "wb")
     # np.save(file, image)
     # file.close()
     
     # OpenCV save
-    # cv2.imwrite("./thingsToSubmit/submission4/"+ name +".png", image, [int(cv2.IMWRITE_PNG_COMPRESSION), 9] )
+    cv2.imwrite("./thingsToSubmit/submission4/"+ name +".png", image, [int(cv2.IMWRITE_PNG_COMPRESSION), 9] )
     
     # Pillow save
-    toSave = Image.fromarray(image)
-    toSave.save("./thingsToSubmit/submission4/"+ name +".png")
+    # toSave = Image.fromarray(image)
+    # toSave.save("./thingsToSubmit/submission4/"+ name +".png")
 
 
 extrinsics_file = open("Calibration/Missions/Mission_5/extrinsics.txt", "r")
@@ -371,6 +374,11 @@ def generateLeftPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
 
 def visualizeLeftPackageMatrix(leftPackageMatrix):
     
+    # Save Package matrix itself first
+    package_file = open("./thingsToSubmit/submission4/leftPackage/leftPackage.npy", "wb")
+    np.save(package_file, leftPackageMatrix)
+    package_file.close()
+    
     # leftIntensity, fd, depth, frgb, r, g, b, fright, rightIntensity
     
     # First original rgb image
@@ -477,7 +485,13 @@ def generateRightPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
     return rightPackageMatrix
     
 def visualizeRightPackageMatrix(rightPackageMatrix):
-     # rightIntensity, fd, depth, frgb, r, g, b, fleft, leftIntensity
+    
+    # Save Package matrix itself first
+    package_file = open("./thingsToSubmit/submission4/rightPackage/rightPackage.npy", "wb")
+    np.save(package_file, rightPackageMatrix)
+    package_file.close()
+    
+    # rightIntensity, fd, depth, frgb, r, g, b, fleft, leftIntensity
     
     # First original rgb image
     
@@ -780,7 +794,7 @@ imgLeft = imgLeft.astype(np.uint8)
 
 imgLeft =  (imgLeft * flagLeft).astype(np.uint8)
 
-fark = np.abs(karsilastir - imgLeft)
+fark = np.abs(karsilastir.astype(np.float32) - imgLeft.astype(np.float32)).astype(np.uint8)
 
 np.sum(np.logical_xor(flagKarsi, flagLeft))
 
