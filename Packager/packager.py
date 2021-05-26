@@ -569,6 +569,9 @@ T_C2LF = -np.dot(R_C2LF, T_LF2C)
 R_C2RF = np.linalg.inv(R_RF2C)
 T_C2RF = -np.dot(R_C2RF, T_RF2C)
 
+R_RF2LF = np.linalg.inv(R_LF2RF)
+T_RF2LF = -np.dot(R_RF2LF, T_LF2RF)
+
 
 T_D2C = np.array([0.014851336367428, 0.0004623454588, 0.000593442469835]) # from depth to RGB(infrared 1)
 

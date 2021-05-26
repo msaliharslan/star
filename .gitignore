@@ -5,6 +5,7 @@
 *Cache.txt
 *.o
 *.make
+*.npy
 /Intel*RealSense*D435I
 /Intel*RealSense*T265
 /Recorder/build

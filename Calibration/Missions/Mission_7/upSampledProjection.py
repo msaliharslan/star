@@ -26,10 +26,10 @@ def normalizeImageAndSave_toTemp(image, name):
     
     # Normalisation
     if(len(image.shape) == 3  and image.shape[-1] == 3): # normalise only rgb
-        image = image / np.max(image) * (2**16-1)
+        image = image / np.max(image[~np.isnan(image)]) * (2**16-1)
         image = (image/256).astype(np.uint8) 
     else:
-        image = image / np.max(image) * (2**16-1)
+        image = image / np.max(image[~np.isnan(image)]) * (2**16-1)
         image = image.astype(np.uint16)
     # numpy save
     # file = open("./thingsToSubmit/submission4/"+ name +".npy", "wb")
@@ -154,6 +154,13 @@ worldP_color = np.dot(R4, worldP_depth.reshape(shape[0]*shape[1], 3).T) + np.exp
 worldP_left = np.dot(R_C2LF, worldP_color) + T_C2LF
 worldP_right = np.dot(R_C2RF, worldP_color) + T_C2RF
 
+pt_cld_file = open("./thingsToSubmit/submission4/leftPackage/pt_cloud.npy", "wb")
+np.save(pt_cld_file, worldP_left)
+pt_cld_file.close()
+
+pt_cld_file = open("./thingsToSubmit/submission4/rightPackage/pt_cloud.npy", "wb")
+np.save(pt_cld_file, worldP_right)
+pt_cld_file.close()
 
 imgP_color = np.dot(KRgb, worldP_color)
 imgP_color /= imgP_color[2,:]
@@ -219,13 +226,13 @@ def downSampleImage(image, downSampleRate):
 
 def generateRgbPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
     
-    rgbPackageMatrix = np.zeros((imgRgb.shape[0],imgRgb.shape[1], 9)) # r,g,b, fd, depth, fleft, leftIntensity, fright, rightIntensity
+    rgbPackageMatrix = np.zeros((imgRgb.shape[0],imgRgb.shape[1], 10)) * np.nan # r,g,b, fd, depth, fleft, leftIntensity, fright, rightIntensity, point_index
+    index_arr = np.arange(0, mapMatrix.shape[0], dtype=np.uint32)
     
     rgbPackageMatrix[:,:,0:3] = imgRgb
   
-# frgb, xrgb, yrgb,   fleft, xleft, yleft,  fright, xright, yright    
+    # frgb, xrgb, yrgb,   fleft, xleft, yleft,  fright, xright, yright    
       
-    
     frgb = mapMatrix[:,0]
     fleft = mapMatrix[:,4]
     fright = mapMatrix[:,8]
@@ -248,6 +255,8 @@ def generateRgbPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
     temp = rgbPackageMatrix[mapMatrix[indexRight,:][:,2], mapMatrix[indexRight,:][:,1]]
     temp[:,7:9] = np.vstack((np.ones(indexRight.shape), imgRight[mapMatrix[indexRight,:][:,10], mapMatrix[indexRight,:][:,9]])).T
     rgbPackageMatrix[mapMatrix[indexRight,:][:,2], mapMatrix[indexRight,:][:,1]] = temp
+    
+    rgbPackageMatrix[mapMatrix[indexRgb,:][:,2], mapMatrix[indexRgb,:][:,1], 9] = index_arr[indexRgb] 
 
     # for mapp in tqdm(mapMatrix):
     #     if(mapp[0]):
@@ -270,6 +279,7 @@ def visualizeRgbPackageMatrix(rgbPackageMatrix): # r,g,b, fd, depth, fleft, left
     
     imgRgb = rgbPackageMatrix[:,:,0:3]
     flagRgb = np.ones((imgRgb.shape[0], imgRgb.shape[1], 1), dtype=imgRgb.dtype)     
+    
 
     imgRgb = downSampleImage(imgRgb, u_rgb) # cv2.resize(imgRgb, None, fx = 1/u_rgb, fy = 1/u_rgb, interpolation =  cv2.INTER_CUBIC )
     flagRgb = downSampleImage(flagRgb, u_rgb) #  cv2.resize(flagRgb, None, fx = 1/u_rgb, fy = 1/u_rgb, interpolation =  cv2.INTER_CUBIC )                
@@ -320,8 +330,9 @@ def visualizeRgbPackageMatrix(rgbPackageMatrix): # r,g,b, fd, depth, fleft, left
     
 def generateLeftPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
     
-    leftPackageMatrix = np.zeros((imgLeft.shape[0],imgLeft.shape[1], 9)) # leftIntensity, fd, depth, frgb, r, g, b, fright, rightIntensity
-    
+    leftPackageMatrix = np.zeros((imgLeft.shape[0],imgLeft.shape[1], 10)) * np.nan # leftIntensity, fd, depth, frgb, r, g, b, fright, rightIntensity
+    index_arr = np.arange(0, mapMatrix.shape[0], dtype=np.uint32)
+
     leftPackageMatrix[:,:,0] = imgLeft
     
     frgb = mapMatrix[:,0]
@@ -349,7 +360,8 @@ def generateLeftPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
     temp[:,7:9] = np.vstack((np.ones(indexRight.shape), imgRight[mapMatrix[indexRight,:][:,10], mapMatrix[indexRight,:][:,9]])).T
     leftPackageMatrix[mapMatrix[indexRight,:][:,6], mapMatrix[indexRight,:][:,5]] = temp
 
-    
+    leftPackageMatrix[mapMatrix[indexLeft,:][:,6], mapMatrix[indexLeft,:][:,5], 9] = index_arr[indexLeft]
+
     # for mapp in tqdm(mapMatrix):
     #     if(mapp[4]):
             
@@ -385,6 +397,8 @@ def visualizeLeftPackageMatrix(leftPackageMatrix):
     
     imgRgb = leftPackageMatrix[:,:,4:7]
     flagRgb = leftPackageMatrix[:,:,3]  
+    
+
     
     imgRgb = downSampleImage(imgRgb, u_left) # cv2.resize(imgRgb, None, fx = 1/u_left, fy = 1/u_left, interpolation =  cv2.INTER_CUBIC )
     flagRgb = downSampleImage(flagRgb, u_left) # cv2.resize(flagRgb, None, fx = 1/u_left, fy = 1/u_left, interpolation =  cv2.INTER_CUBIC )           
@@ -433,8 +447,9 @@ def visualizeLeftPackageMatrix(leftPackageMatrix):
 
 def generateRightPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
     
-    rightPackageMatrix = np.zeros((imgRight.shape[0],imgRight.shape[1], 9)) # rightIntensity, fd, depth, frgb, r, g, b, fleft, leftIntensity
-    
+    rightPackageMatrix = np.zeros((imgRight.shape[0],imgRight.shape[1], 10)) * np.nan # rightIntensity, fd, depth, frgb, r, g, b, fleft, leftIntensity
+    index_arr = np.arange(0, mapMatrix.shape[0], dtype=np.uint32)
+
     rightPackageMatrix[:,:,0] = imgRight
   
     frgb = mapMatrix[:,0]
@@ -461,7 +476,9 @@ def generateRightPackageMatrix(mapMatrix, imgRgb, imgLeft, imgRight):
     temp = rightPackageMatrix[mapMatrix[indexLeft,:][:,10], mapMatrix[indexLeft,:][:,9]]
     temp[:,7:9] = np.vstack((np.ones(indexLeft.shape), imgLeft[mapMatrix[indexLeft,:][:,6], mapMatrix[indexLeft,:][:,5]])).T
     rightPackageMatrix[mapMatrix[indexLeft,:][:,10], mapMatrix[indexLeft,:][:,9]] = temp
-
+ 
+    rightPackageMatrix[mapMatrix[indexRight,:][:,10], mapMatrix[indexRight,:][:,9], 9] = index_arr[indexRight]
+                   
     
     # for mapp in tqdm(mapMatrix):
     #     if(mapp[8]):
@@ -775,7 +792,7 @@ fark = np.abs(karsilastir - imgRgb)
 
 np.sum(np.logical_xor(flagKarsi, flagRgb))
 
-cv2.imshow("aa", fark) 
+# cv2.imshow("aa", fark) 
 
 
 ## LEFT
@@ -798,7 +815,7 @@ fark = np.abs(karsilastir.astype(np.float32) - imgLeft.astype(np.float32)).astyp
 
 np.sum(np.logical_xor(flagKarsi, flagLeft))
 
-cv2.imshow("aa", fark) 
+# cv2.imshow("ba", fark) 
 
 
 

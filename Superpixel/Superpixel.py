@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sun Mar  7 10:01:05 2021
-
 @author: kutalmisince
 """
 
@@ -11,11 +10,11 @@ import matplotlib.pyplot as plt
 
 class Superpixel:
 
-    def __init__(self, compactness = 8.0, tiling = 'iSQUARE', exp_area = 256.0, num_req_sps = 0, spectral_cost = 'Bayesian', spatial_cost = 'Bayesian'):
+    def __init__(self, compactness = 8.0, tiling = 'iSQUARE', exp_area = 256.0, num_req_sps = 0, spectral_cost = 'Bayesian', spatial_cost = 'Bayesian', statistics_update_rate = 3):
         
         '''
         compactness: weight of spatial distance, can be any floating number
-        tiling: intial tiling {'RECT', 'HEX', 'IRECT'}
+        tiling: intial tiling {'SQUARE', 'HEX', 'iSQUARE'}
         exp_area: required average area of SPs (not used if num_req_sps is set)
         num_req_sps: number of required SPs
         spectral_cost: spectral cost function {'L2', 'Bayesian'}
@@ -43,7 +42,9 @@ class Superpixel:
         
         # juct connected look-up table
         self.LUT_JC = np.array([0,1,1,0,1,0,0,0,1,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,1,0,0,0,1,0,1,1,0], dtype=bool)
-              
+        
+        self.statistics_update_rate = statistics_update_rate
+        
     def extract_superpixels(self, img_proc, img_disp = None, main_channel = 0):
         
         # get inputs, set process and display image
@@ -84,8 +85,14 @@ class Superpixel:
 
         # refine grid
         self.refine_grid()
+        
+        # set final bboxex
+        self.update_bbox()
 
     def initial_tiling(self):
+        
+        # uncertainty of bbox
+        self.bbox_uncertainty = 0
         
         # perform initial tiling
         if self.tiling == 'iSQUARE':
@@ -121,10 +128,12 @@ class Superpixel:
         rst = np.rint(np.linspace(0, self.height, num_v + 1)).astype(int)
         
         self.num_sps = 0
+        self.label_grid = np.zeros((num_v, num_h))
 
         # set label image and bounding box
         for j in range(num_v):
             for i in range(num_h):
+                self.label_grid[j,i] = self.num_sps
                 self.img_label[rst[j] : rst[j + 1], cst[i] : cst[i + 1]] = self.num_sps
                 self.bbox[self.num_sps, :] = [cst[i], rst[j], cst[i + 1], rst[j + 1]] 
                 self.num_sps += 1
@@ -193,7 +202,7 @@ class Superpixel:
         
         # check the edge length, it must be an integer power of 2
         if self.edge_length != 16:
-            print('Edge length must be 16 for iSQUARE tiling. Tiling is set tot SQAURE!')
+            print('Edge length must be 16 for iSQUARE tiling. Tiling is set to SQAURE!')
             return
                         
         I0 = np.concatenate((np.expand_dims(self.img_proc[:, :, self.main_channel], 2), self.img_grid), axis=2)
@@ -211,10 +220,7 @@ class Superpixel:
         
         self.img_label = L0.astype(int)
         
-        self.bbox[:, 0] = np.maximum(self.bbox[:, 0] - 16, 0)
-        self.bbox[:, 1] = np.maximum(self.bbox[:, 1] - 16, 0)
-        self.bbox[:, 2] = np.minimum(self.bbox[:, 2] + 16, self.width)
-        self.bbox[:, 3] = np.minimum(self.bbox[:, 3] + 16, self.height)
+        self.bbox_uncertainty = 16
         
     def isq_downsample(self, inp_img, inp_area, spatial_reg = True):
     
@@ -392,7 +398,7 @@ class Superpixel:
         self.update_image_boundaries(value = self.num_sps)
         
         # initiate SP distributions
-        self.update_sp_distributions()
+        self.initiate_sp_distributions()
         
         # set cost functions
         if self.spectral_cost == 'Bayesian':
@@ -408,17 +414,12 @@ class Superpixel:
         # refine label image
         for iteration in range(self.max_iterations):
                         
-            print('iteration: ' + str(iteration))
+            #print('iteration: ' + str(iteration))
             for i in np.arange(1, 4): # step by 3 pixels in each axis to preserve connectivity
                 for j in np.arange(1, 4): # do not start from 0 as it has not 8 neighbors
                     self.refine_grid_iteration(i, j)
                     
-            # update image boundaires with nearest neighbor at the end of the loop
-            if iteration == self.max_iterations - 1:
-                self.update_image_boundaries()
-            
-            # update sp distributions
-            self.update_sp_distributions()
+            self.update_image_boundaries()
                     
             if self.img_disp is not None:
                 plt.figure(dpi=300)
@@ -447,14 +448,14 @@ class Superpixel:
         
         # get the current labels and initiate pixel to sp distance
         labels_updated  = self.img_label[t:b:3, l:r:3][B]
-                
-        d_min = np.full(len(labels_updated), np.inf)
+        labels_original = labels_updated.copy() 
         
+        d_min = np.full(len(labels_updated), np.inf)
         
         # handle NaN's: if a pixel value or one of its candidate labels is NaN, then spectral distance for that pixel is not taken into account
         nan_mask = np.isnan(I)
         
-        for n in np.arange(1,5): # check canddate labels of NaN
+        for n in np.arange(1,5): # check NaN candidate labels 
             
             # get neighbor label
             L = self.img_label[t+self.neighbor_y[n]:b+self.neighbor_y[n]:3, l+self.neighbor_x[n]:r+self.neighbor_x[n]:3][B]
@@ -481,23 +482,31 @@ class Superpixel:
         # update label image
         self.img_label[t:b:3, l:r:3][B] = labels_updated
         
+        self.bbox_uncertainty += 1
+        
+        self.update_sp_distributions(labels_original, labels_updated, self.img_proc[t:b:3, l:r:3, :][B, :], X)
+        
     def update_image_boundaries(self, value = None):
         
         if value == None:
+            
+            labels_original = self.img_label.copy()
+            
             self.img_label[0, :] = self.img_label[1, :]
             self.img_label[:, 0] = self.img_label[:, 1]
             self.img_label[-1, :] = self.img_label[-2, :]
             self.img_label[:, -1] = self.img_label[:, -2]
             
-            self.bbox[:, 0:1] -= 1
-            self.bbox[:, 2:3] += 1
+            self.bbox_uncertainty += 1
+            
+            self.update_sp_distributions(labels_original, self.img_label, self.img_proc, self.img_grid)
         else:
             self.img_label[0, :] = value
             self.img_label[:, 0] = value
             self.img_label[-1, :] = value
             self.img_label[:, -1] = value
         
-    def update_sp_distributions(self):
+    def update_sp_distributions_original(self):
         
         # spectral distribution is expressed as mean and variance, spatial distribution is expresed as center and covariance
         self.mean   = np.ones((self.num_sps+1, self.channels))
@@ -512,10 +521,10 @@ class Superpixel:
         for n in range(self.num_sps):
             
             # extend current bbox
-            l = np.maximum(self.bbox[n, 0] - 3, 0)
-            t = np.maximum(self.bbox[n, 1] - 3, 0)
-            r = np.minimum(self.bbox[n, 2] + 3, self.width)
-            b = np.minimum(self.bbox[n, 3] + 3, self.height)
+            l = np.maximum(self.bbox[n, 0] - self.bbox_uncertainty, 0)
+            t = np.maximum(self.bbox[n, 1] - self.bbox_uncertainty, 0)
+            r = np.minimum(self.bbox[n, 2] + self.bbox_uncertainty, self.width)
+            b = np.minimum(self.bbox[n, 3] + self.bbox_uncertainty, self.height)
             
             # get mask for SP n
             M = self.img_label[t:b, l:r] == n
@@ -540,7 +549,9 @@ class Superpixel:
             self.center[n, :] = np.nanmean(X, 0)
             
             self.cov[n, :, :] = np.cov(X.transpose())
-            
+        
+        self.bbox_uncertainty = 0
+        
         # bound variance INDEPENDENT CHANNELS
         '''
         var_avg = np.nanmean(self.var, 0)
@@ -567,9 +578,243 @@ class Superpixel:
         self.covInv = np.vstack((self.cov[:, 1, 1]/covDet, -self.cov[:, 1, 0]/covDet, self.cov[:, 0, 0]/covDet)).transpose()
         self.covLog = np.log(covDet)
         
+    def update_bbox(self):
+        
+        if self.bbox_uncertainty == 0:
+            return        
+                
+        # find sp distributions
+        for n in range(self.num_sps):
+            
+            # extend current bbox
+            l = np.maximum(self.bbox[n, 0] - self.bbox_uncertainty, 0)
+            t = np.maximum(self.bbox[n, 1] - self.bbox_uncertainty, 0)
+            r = np.minimum(self.bbox[n, 2] + self.bbox_uncertainty, self.width)
+            b = np.minimum(self.bbox[n, 3] + self.bbox_uncertainty, self.height)
+            
+            # get mask for SP n
+            M = self.img_label[t:b, l:r] == n
+                     
+            # pixels of SP n
+            X = self.img_grid[t:b, l:r, :][M, :]
+           
+            # set new bbox
+            r = np.max(X[:, 0]) + 1
+            l = np.min(X[:, 0])
+            
+            b = np.max(X[:, 1]) + 1
+            t = np.min(X[:, 1])
+            
+            self.bbox[n, :] = np.array([l,t,r,b])
+            
+    def initiate_sp_distributions(self):
+        
+        # first find sum and squared sums (will be employed in incremental update)
+        self.sum_I  = np.zeros((self.num_sps+1, self.channels))
+        self.sum_I2 = np.zeros((self.num_sps+1, self.channels))
+        self.sum_X  = np.zeros((self.num_sps+1, 2))
+        self.sum_X2 = np.zeros((self.num_sps+1, 2, 2))
+        
+        self.area = np.zeros((self.num_sps+1, 1))
+        self.num_valid_pixels = np.zeros((self.num_sps+1, self.channels))
+                        
+        # find sp distributions
+        for n in range(self.num_sps):
+            
+            # extend current bbox
+            l = np.maximum(self.bbox[n, 0] - self.bbox_uncertainty, 0)
+            t = np.maximum(self.bbox[n, 1] - self.bbox_uncertainty, 0)
+            r = np.minimum(self.bbox[n, 2] + self.bbox_uncertainty, self.width)
+            b = np.minimum(self.bbox[n, 3] + self.bbox_uncertainty, self.height)
+            
+            # get mask for SP n
+            M = self.img_label[t:b, l:r] == n
+                     
+            # pixels of SP n
+            I = self.img_proc[t:b, l:r, :][M, :]
+            X = self.img_grid[t:b, l:r, :][M, :]
+           
+            # set new bbox
+            r = np.max(X[:, 0]) + 1
+            l = np.min(X[:, 0])
+            
+            b = np.max(X[:, 1]) + 1
+            t = np.min(X[:, 1])
+            
+            self.bbox[n, :] = np.array([l,t,r,b])
+            
+            # find spatial and spectral sum, squared sum and area (exclude nan's)
+            self.sum_I[n, :] = np.nansum(I, 0)
+            self.sum_I2[n, :]  = np.nansum(I ** 2, 0)
+            
+            self.num_valid_pixels[n] = np.sum(~np.isnan(I), 0)
+    
+            self.sum_X[n, :] = np.sum(X, 0)
+            
+            self.sum_X2[n, :, :] = np.expand_dims(np.matmul(X.transpose(), X), 0) 
+                       
+            self.area[n] = X.shape[0]
+        
+        self.bbox_uncertainty = 0
+        
+        # set statistics of virtual sp
+        self.num_valid_pixels[-1, :] = 1
+        self.area[-1] = 1
+        
+        # update statistics
+        self.update_sp_statistics()
+            
+    def sp_statistics_check(self):
+        
+        mean  = np.zeros((self.num_sps+1, self.channels))
+        var = np.zeros((self.num_sps+1, self.channels))
+        center = np.zeros((self.num_sps+1, 2))
+        cov = np.zeros((self.num_sps+1, 2, 2))
+        area  = np.zeros((self.num_sps+1, 1))
+        
+        for n in range(self.num_sps):
+                        
+            # get mask for SP n
+            M = self.img_label == n
+                     
+            # pixels of SP n
+            I = self.img_proc[M, :]
+            X = self.img_grid[M, :]
+            
+            mean[n, :] = np.nanmean(I, 0)
+            var[n, :]  = np.nanvar(I, 0)
+            center[n, :] = np.nanmean(X, 0)
+            cov[n, :, :] = np.cov(X.transpose(), bias=True)
+            area[n, 0] = np.sum(M)
+            
+        mean_err = np.sum(abs(mean[:-1, :] - self.mean[:-1, :]) > 0.0001)
+        center_err = np.sum(abs(center[:-1, :] - self.center[:-1, :]) > 0.0001)
+        var_err = np.sum(np.abs(var[:-1, :] - self.var[:-1, :]) > 0.0001)
+        cov_err = np.sum(np.abs(cov[:-1, :, :] - self.cov[:-1, :, :]) > 0.0001)
+        
+        if mean_err:
+            print('mean_err')
+        if center_err:
+            print('center_err')
+        if var_err:
+            print('var_err')
+        if cov_err:
+            print('cov_err')
+                
+    def update_sp_statistics(self):
+        
+        # spectral distribution is expressed as mean and variance, spatial distribution is expresed as center and covariance
+        self.mean   = self.sum_I / self.num_valid_pixels
+        self.var    = self.sum_I2 / self.num_valid_pixels - self.mean ** 2
+        self.center = self.sum_X / self.area
+        self.cov    = self.sum_X2 / np.expand_dims(self.area, 2) - np.array([[self.center[:, 0]**2, self.center[:, 0] * self.center[:, 1]], [self.center[:, 0] * self.center[:, 1], self.center[:, 1]**2]]).transpose([2,0,1])
+        
+        self.mean[self.num_sps, :] = np.inf
+        self.center[self.num_sps, :] = np.inf
+        
+        # self.sp_statistics_check()
+        
+        # bound variance INDEPENDENT CHANNELS
+        '''
+        var_avg = np.nanmean(self.var, 0)
+        var_avg = np.maximum(var_avg, self.measurement_precision)
+        
+        var_limited = np.minimum(np.maximum(self.var, self.var_max * var_avg), self.var_min * var_avg)
+        '''
+        
+        # bound variances, for each SP all channels are normalized with the same variance
+        var_avg = np.nanmean(self.var)
+        var_avg = np.maximum(var_avg, self.measurement_precision)
+        
+        var_limited = np.minimum(np.maximum(np.sum(self.var, 1, keepdims=True), self.var_max * var_avg), self.var_min * var_avg)
+        
+        # get variance inverse
+        self.var_inv = 1 / var_limited
+        self.var_log = np.log(var_limited)
+        
+        # regularize spatial covariance and get inverse
+        covLimited = (1 - self.cov_reg_weight) * self.cov + self.cov_reg_weight * self.cov_reg
+        
+        covDet = covLimited[:, 0, 0] * covLimited[:, 1, 1] - covLimited[:, 1, 0] * covLimited[:, 0, 1]
+                
+        self.covInv = np.vstack((self.cov[:, 1, 1]/covDet, -self.cov[:, 1, 0]/covDet, self.cov[:, 0, 0]/covDet)).transpose()
+        self.covLog = np.log(covDet)
+    
+    def update_sp_distributions(self, labels_prev, labels_curr, I, X):
+        
+        # select updated pixels
+        mask = labels_prev != labels_curr
+        
+        labels_prev = np.hstack((-1, labels_prev[mask]))
+        labels_curr = np.hstack((-1, labels_curr[mask]))
+        I = np.vstack((np.zeros((1, self.channels)), I[mask]))
+        X = np.vstack((np.zeros((1, 2)), X[mask]))
+        
+        # sort labels, so you can use cumsum and label difference to find updates
+        ind = np.argsort(labels_prev)
+        
+        # get cumsum of label sorted I and X
+        sum_I  = np.nancumsum(I[ind, :], axis=0)
+        sum_I2 = np.nancumsum(I[ind, :] ** 2, axis=0)
+        num_valid_pixels = np.nancumsum(~np.isnan(I[ind, :]), axis=0)
+        
+        sum_X  = np.cumsum(X[ind, :], axis=0)
+        sum_X2 = np.column_stack((np.cumsum(X[ind, 0] ** 2, 0), \
+                                  np.cumsum(X[ind, 0] * X[ind, 1], 0), \
+                                  np.cumsum(X[ind, 0] * X[ind, 1], 0), \
+                                  np.cumsum(X[ind, 1] ** 2, 0))).reshape((-1,2,2))
+
+        labels_prev = labels_prev[ind]
+        
+        ind_d = np.nonzero(labels_prev != np.append(labels_prev[1:], -1))[0]
+        
+        ind_c = ind_d[1:]
+        ind_p = ind_d[:-1]
+        
+        labels = labels_prev[ind_c]
+        
+        self.sum_I[labels, :] -= sum_I[ind_c, :] - sum_I[ind_p, :]
+        self.sum_I2[labels, :] -= sum_I2[ind_c, :] - sum_I2[ind_p, :]
+        self.num_valid_pixels[labels, :] -= num_valid_pixels[ind_c, :] - num_valid_pixels[ind_p, :]
+        self.sum_X[labels, :] -= sum_X[ind_c, :] - sum_X[ind_p, :]
+        self.sum_X2[labels, :, :] -= sum_X2[ind_c, :, :] - sum_X2[ind_p, :, :]
+        self.area[labels] -= np.expand_dims(ind_c - ind_p, 1)
+        
+        # sort labels, so you can use cumsum and label difference to find updates
+        ind = np.argsort(labels_curr)
+        
+        # get cumsum of label sorted I and X
+        sum_I  = np.nancumsum(I[ind, :], axis=0)
+        sum_I2 = np.nancumsum(I[ind, :] ** 2, axis=0)
+        num_valid_pixels = np.nancumsum(~np.isnan(I[ind, :]), axis=0)
+        
+        sum_X  = np.cumsum(X[ind, :], axis=0)
+        sum_X2 = np.column_stack((np.cumsum(X[ind, 0] ** 2, 0), \
+                                  np.cumsum(X[ind, 0] * X[ind, 1], 0), \
+                                  np.cumsum(X[ind, 0] * X[ind, 1], 0), \
+                                  np.cumsum(X[ind, 1] ** 2, 0))).reshape((-1,2,2))
+
+        labels_curr = labels_curr[ind]
+        
+        ind_d = np.nonzero(labels_curr != np.append(labels_curr[1:], -1))[0]
+        
+        ind_c = ind_d[1:]
+        ind_p = ind_d[:-1]
+        
+        labels = labels_curr[ind_c]
+        
+        self.sum_I[labels, :] += sum_I[ind_c, :] - sum_I[ind_p, :]
+        self.sum_I2[labels, :] += sum_I2[ind_c, :] - sum_I2[ind_p, :]
+        self.num_valid_pixels[labels, :] += num_valid_pixels[ind_c, :] - num_valid_pixels[ind_p, :]
+        self.sum_X[labels, :] += sum_X[ind_c, :] - sum_X[ind_p, :]
+        self.sum_X2[labels, :, :] += sum_X2[ind_c, :, :] - sum_X2[ind_p, :, :]
+        self.area[labels] += np.expand_dims(ind_c - ind_p, 1)
+        
+        self.update_sp_statistics()
+        
     def spectral_L2(self, I, L):
         return np.nansum((I - self.mean[L, :]) ** 2, 1) / self.var_default
-
+  
     def spectral_bayesian(self, I, L):
         return np.nansum((I - self.mean[L, :]) ** 2 * self.var_inv[L, :] + self.var_log[L, :], 1) 
     
@@ -622,6 +867,138 @@ class Superpixel:
         for ch in range(J.shape[2]): J[B, ch] = color[ch] 
             
         return J
+
+    def fill_plane_fitted_superpixel(self, pcloud, pt_indices, K):
+        img_out = np.zeros((self.img_proc.shape[0], self.img_proc.shape[1]))
+        K_inv = np.linalg.inv(K)
+        filename_counter = 0;
+        filename_base = "plane_points_"
+
+        for n in np.arange(self.num_sps):
+            
+            b = self.bbox[n, :]
+            
+            mask = self.img_label[b[1]:b[3], b[0]:b[2]] == n
+            
+            if np.sum ( ~np.isnan( pt_indices[b[1]:b[3], b[0]:b[2]][mask])  ) < 10 :
+                continue
+            
+            mask_not_nans = (mask * ~np.isnan(pt_indices[b[1]:b[3], b[0]:b[2]]))
+            pts_on_plane = pcloud[ :, pt_indices[b[1]:b[3], b[0]:b[2]][mask_not_nans].astype(np.uint32 ) ]
+            
+            center =  np.expand_dims(np.mean(pts_on_plane, 1), 1)
+            normalised_pts = pts_on_plane - center
+            U, S, Vh = np.linalg.svd(normalised_pts)
+            normal = np.expand_dims(U[:,2], 1) 
+            
+            # dists = np.abs(np.dot(normal.T, normalised_pts))
+            # avg_dist = np.sum(dists) / normalised_pts.shape[1]
+         
+            # print("max err = " + str(np.max(dists)))
+            # print("avg err = " + str(avg_dist))
+            
+            
+            
+            
+            A = normal[0][0]
+            B = normal[1][0]
+            C = normal[2][0]
+            D = -1 * np.dot(normal.T, center)[0][0]
+            
+            # print("Center = " + str(center))
+            assert center[2] > 0
+            # print("Normal = " + str(normal))
+            # print(D)
+        
+            
+            shape = ( b[3]-b[1], b[2]-b[0] )
+            objp = np.ones((shape[0] * shape[1], 3), np.uint32)
+            objp[:, :2] = np.mgrid[ b[0]:b[2], b[1]:b[3]].T.reshape(-1, 2)
+            objp = objp.T
+            worldP = np.dot(K_inv, objp)
+            worldP = worldP / worldP[2,:]
+            assert np.min(worldP[2,:]) > 0
+            
+            depths = (-1 * D) / (A * worldP[0, :] + B * worldP[1, :] + C)
+            depths = depths.reshape( (shape[1], shape[0]) ).T
+            # plt.figure(0)
+            # plt.imshow(depths)
+            # return
+ 
+                   
+            if(np.min(depths) < 0):
+                # print("negative")
+                # np.savetxt(filename_base + str(filename_counter) + ".txt", pts_on_plane.T)
+                filename_counter += 1
+                # if(np.max(depths) > 0):
+                #     print("different sign mix - max\n")
+                # img_out[b[1]:b[3], b[0]:b[2]][mask] = -1e5
+                continue
+            
+            img_out[b[1]:b[3], b[0]:b[2]][mask] = depths[mask] * 1e3
+            # print("Depths " + str(depths[mask].shape))
+            # print("img_out part" + str(img_out[b[1]:b[3], b[0]:b[2]][mask].shape))
+            # print(np.min(depths[mask]))
+            # print(np.max(depths[mask]))
+            # print("\n####################################\n")
+            
+
+            
+            # if(np.max(depths) > 4):
+            #     img_out[b[1]:b[3], b[0]:b[2]][mask] = -1e5
+            #     np.savetxt(filename_base + "absurd_" + str(n) + ".txt", pts_on_plane.T)
+            #     continue
+
+            
+            # if(n == 1669):
+            #     print(normal)
+            #     print(D)
+            #     np.savetxt(filename_base + str(n) + ".txt", pts_on_plane.T)
+                
+            # if (n % 50 == 0):
+            #     np.savetxt(filename_base + "positive_" + str(n) + ".txt", pts_on_plane.T)
+
+
+        print(str(filename_counter) + "          " + str(self.num_sps))
+        median = np.median(img_out)
+        img_out = self.draw_boundaries(img_out, color=[18 * median - 1, 18 * median - 1, 18 * median - 1])[:,:,0]
+        return img_out
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
