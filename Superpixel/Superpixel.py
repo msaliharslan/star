@@ -873,6 +873,7 @@ class Superpixel:
         K_inv = np.linalg.inv(K)
         filename_counter = 0;
         filename_base = "plane_points_"
+        filename_base_depths = "depths_"
 
         for n in np.arange(self.num_sps):
             
@@ -920,7 +921,7 @@ class Superpixel:
             assert np.min(worldP[2,:]) > 0
             
             depths = (-1 * D) / (A * worldP[0, :] + B * worldP[1, :] + C)
-            depths = depths.reshape( (shape[1], shape[0]) ).T
+            depths = depths.reshape( (shape[0], shape[1]) )
             # plt.figure(0)
             # plt.imshow(depths)
             # return
@@ -933,6 +934,7 @@ class Superpixel:
                 # if(np.max(depths) > 0):
                 #     print("different sign mix - max\n")
                 # img_out[b[1]:b[3], b[0]:b[2]][mask] = -1e5
+                print("Negative depth at SP no:" + str(n))
                 continue
             
             img_out[b[1]:b[3], b[0]:b[2]][mask] = depths[mask] * 1e3
@@ -950,10 +952,12 @@ class Superpixel:
             #     continue
 
             
-            # if(n == 1669):
-            #     print(normal)
-            #     print(D)
-            #     np.savetxt(filename_base + str(n) + ".txt", pts_on_plane.T)
+            if(n == 1669):
+                print(normal)
+                print(D)
+                np.savetxt(filename_base + str(n) + ".txt", pts_on_plane.T)
+                # np.savetxt("point_indices" + str(n) + ".txt", pt_indices[b[1]:b[3], b[0]:b[2]][mask_not_nans].astype(np.uint32 ) )
+                np.savetxt(filename_base_depths + str(n) + ".txt", (depths.reshape( shape[0] * shape[1] ) * worldP).T )
                 
             # if (n % 50 == 0):
             #     np.savetxt(filename_base + "positive_" + str(n) + ".txt", pts_on_plane.T)

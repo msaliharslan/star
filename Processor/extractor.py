@@ -8,8 +8,6 @@ Created on Thu Feb  6 17:14:44 2020
 
 import rosbag, csv
 import os
-import shutil
-import argparse
 
 os.chdir("../")
 

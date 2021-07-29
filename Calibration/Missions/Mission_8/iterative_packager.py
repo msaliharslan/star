@@ -112,6 +112,8 @@ def main():
     right_measured = rightPackageMatrix[:,:,2][0:992, 0:992]
     right_measured[right_measured_flag == 0] = np.nan
 
+    plt.figure()
+    plt.imshow(left_measured[375:600, 890:990])
 
     
     ################## First iteration

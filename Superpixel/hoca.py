@@ -12,12 +12,12 @@ from matplotlib import pyplot as plt
 import cv2
 
 KL = np.array([[500. ,   0. , 499.5],
-       [  0. , 500. , 499.5],
-       [  0. ,   0. ,   1. ]])
+               [  0. , 500. , 499.5],
+               [  0. ,   0. ,   1. ]])
 
 KR = np.array([[500. ,   0. , 499.5],
- [  0. , 500. , 499.5],
- [  0.,    0. ,   1. ]])
+               [  0. , 500. , 499.5],
+               [  0.,    0. ,   1. ]])
 
 def fill_depth_using_superpixels(packages, pt_clouds, fill_method): # (leftPackage, RightPackage)
     """
